@@ -437,6 +437,7 @@
             // 
             // button3
             // 
+            this.button3.BackColor = System.Drawing.SystemColors.Control;
             this.button3.Enabled = false;
             this.button3.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.button3.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
@@ -445,7 +446,7 @@
             this.button3.Size = new System.Drawing.Size(75, 23);
             this.button3.TabIndex = 34;
             this.button3.Text = "统一";
-            this.button3.UseVisualStyleBackColor = true;
+            this.button3.UseVisualStyleBackColor = false;
             this.button3.Click += new System.EventHandler(this.button3_Click);
             // 
             // TaskPaneGrid
@@ -484,7 +485,7 @@
             this.Controls.Add(this.Step1);
             this.Margin = new System.Windows.Forms.Padding(0);
             this.Name = "TaskPaneGrid";
-            this.Size = new System.Drawing.Size(269, 808);
+            this.Size = new System.Drawing.Size(270, 808);
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown3)).EndInit();

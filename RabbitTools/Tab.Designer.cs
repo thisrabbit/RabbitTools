@@ -76,8 +76,9 @@
             // 
             this.ShapeProportionate.Label = "比例化";
             this.ShapeProportionate.Name = "ShapeProportionate";
-            this.ShapeProportionate.ScreenTip = "形状比例化";
+            this.ShapeProportionate.ScreenTip = "尺寸比例化";
             this.ShapeProportionate.SuperTip = "按照指定的数学公式将包含数字的形状的尺寸调整为与内含数字成比例";
+            this.ShapeProportionate.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.ShapeProportionate_Click);
             // 
             // Tab
             // 

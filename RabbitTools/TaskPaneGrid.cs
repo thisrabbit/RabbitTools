@@ -17,6 +17,8 @@ namespace RabbitTools
 {
     public partial class TaskPaneGrid : UserControl
     {
+        PowerPoint.Application app = Globals.ThisAddIn.Application;
+
         public TaskPaneGrid()
         {
             InitializeComponent();
@@ -27,11 +29,12 @@ namespace RabbitTools
             app.WindowSelectionChange +=
                 new PowerPoint.EApplication_WindowSelectionChangeEventHandler(HandleWindowSelectionChanged);
         }
-
-        PowerPoint.Application app = Globals.ThisAddIn.Application;
         
         public void HandleWindowSelectionChanged(PowerPoint.Selection sel)
         {
+            if (!Globals.ThisAddIn.TaskPaneGrid.Visible)
+                return;
+
             if (sel.Type == PowerPoint.PpSelectionType.ppSelectionShapes)
             {
                 //if (sel.HasChildShapeRange)

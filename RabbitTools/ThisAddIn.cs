@@ -20,10 +20,25 @@ namespace RabbitTools
             }
         }
 
+        private TPProportionate controlOfTPProportionate;
+        private Microsoft.Office.Tools.CustomTaskPane tpProportionate;
+        public Microsoft.Office.Tools.CustomTaskPane TPProportionate
+        {
+            get
+            {
+                return tpProportionate;
+            }
+        }
+
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
             controlOfPaneGrid = new TaskPaneGrid();
             taskPaneGrid = this.CustomTaskPanes.Add(controlOfPaneGrid, "网格布局工具");
+            taskPaneGrid.Width = 270;
+
+            controlOfTPProportionate = new TPProportionate();
+            tpProportionate = this.CustomTaskPanes.Add(controlOfTPProportionate, "尺寸比例化工具");
+            tpProportionate.Width = 290;
         }
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)

@@ -191,6 +191,12 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="TPProportionate.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="TPProportionate.Designer.cs">
+      <DependentUpon>TPProportionate.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -205,6 +211,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="TaskPaneGrid.resx">
       <DependentUpon>TaskPaneGrid.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="TPProportionate.resx">
+      <DependentUpon>TPProportionate.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

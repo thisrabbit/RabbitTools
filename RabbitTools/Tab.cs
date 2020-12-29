@@ -19,5 +19,10 @@ namespace RabbitTools
         {
             Globals.ThisAddIn.TaskPaneGrid.Visible = true;
         }
+
+        private void ShapeProportionate_Click(object sender, RibbonControlEventArgs e)
+        {
+            Globals.ThisAddIn.TPProportionate.Visible = true;
+        }
     }
 }
