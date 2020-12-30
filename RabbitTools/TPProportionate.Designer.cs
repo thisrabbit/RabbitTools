@@ -43,6 +43,9 @@ namespace RabbitTools
             this.presetPow = new System.Windows.Forms.Button();
             this.presetCustom = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.label1 = new System.Windows.Forms.Label();
+            this.HOnly = new System.Windows.Forms.CheckBox();
+            this.WOnly = new System.Windows.Forms.CheckBox();
             this.panel1 = new System.Windows.Forms.Panel();
             this.panel2 = new System.Windows.Forms.Panel();
             this.dirFL = new System.Windows.Forms.Label();
@@ -83,7 +86,7 @@ namespace RabbitTools
             this.pr2.AutoCheck = false;
             this.pr2.AutoSize = true;
             this.pr2.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.pr2.Location = new System.Drawing.Point(6, 41);
+            this.pr2.Location = new System.Drawing.Point(6, 40);
             this.pr2.Name = "pr2";
             this.pr2.Size = new System.Drawing.Size(144, 16);
             this.pr2.TabIndex = 21;
@@ -99,7 +102,7 @@ namespace RabbitTools
             this.groupBox1.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
             this.groupBox1.Location = new System.Drawing.Point(18, 20);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(250, 107);
+            this.groupBox1.Size = new System.Drawing.Size(250, 106);
             this.groupBox1.TabIndex = 22;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "进行下一步要满足的条件：";
@@ -109,7 +112,7 @@ namespace RabbitTools
             this.pr4.AutoCheck = false;
             this.pr4.AutoSize = true;
             this.pr4.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.pr4.Location = new System.Drawing.Point(6, 85);
+            this.pr4.Location = new System.Drawing.Point(6, 84);
             this.pr4.Name = "pr4";
             this.pr4.Size = new System.Drawing.Size(240, 16);
             this.pr4.TabIndex = 25;
@@ -121,7 +124,7 @@ namespace RabbitTools
             this.pr3.AutoCheck = false;
             this.pr3.AutoSize = true;
             this.pr3.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.pr3.Location = new System.Drawing.Point(6, 63);
+            this.pr3.Location = new System.Drawing.Point(6, 62);
             this.pr3.Name = "pr3";
             this.pr3.Size = new System.Drawing.Size(156, 16);
             this.pr3.TabIndex = 24;
@@ -133,7 +136,7 @@ namespace RabbitTools
             this.pr1.AutoCheck = false;
             this.pr1.AutoSize = true;
             this.pr1.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.pr1.Location = new System.Drawing.Point(6, 19);
+            this.pr1.Location = new System.Drawing.Point(6, 18);
             this.pr1.Name = "pr1";
             this.pr1.Size = new System.Drawing.Size(126, 16);
             this.pr1.TabIndex = 23;
@@ -158,7 +161,6 @@ namespace RabbitTools
             this.canvas.Size = new System.Drawing.Size(250, 200);
             this.canvas.TabIndex = 24;
             this.canvas.TabStop = false;
-            this.canvas.Click += new System.EventHandler(this.canvas_Click);
             // 
             // label8
             // 
@@ -221,6 +223,9 @@ namespace RabbitTools
             // 
             // panel3
             // 
+            this.panel3.Controls.Add(this.label1);
+            this.panel3.Controls.Add(this.HOnly);
+            this.panel3.Controls.Add(this.WOnly);
             this.panel3.Controls.Add(this.step2);
             this.panel3.Controls.Add(this.canvas);
             this.panel3.Controls.Add(this.presetCustom);
@@ -228,10 +233,45 @@ namespace RabbitTools
             this.panel3.Controls.Add(this.label8);
             this.panel3.Controls.Add(this.presetLog);
             this.panel3.Controls.Add(this.presetLinear);
-            this.panel3.Location = new System.Drawing.Point(6, 296);
+            this.panel3.Location = new System.Drawing.Point(6, 293);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(268, 252);
+            this.panel3.Size = new System.Drawing.Size(268, 275);
             this.panel3.TabIndex = 31;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.label1.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.label1.Location = new System.Drawing.Point(149, 254);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(44, 17);
+            this.label1.TabIndex = 33;
+            this.label1.Text = "仅显示";
+            // 
+            // HOnly
+            // 
+            this.HOnly.AutoSize = true;
+            this.HOnly.Enabled = false;
+            this.HOnly.Location = new System.Drawing.Point(234, 254);
+            this.HOnly.Name = "HOnly";
+            this.HOnly.Size = new System.Drawing.Size(36, 16);
+            this.HOnly.TabIndex = 32;
+            this.HOnly.Text = "高";
+            this.HOnly.UseVisualStyleBackColor = true;
+            this.HOnly.CheckedChanged += new System.EventHandler(this.HOnly_CheckedChanged);
+            // 
+            // WOnly
+            // 
+            this.WOnly.AutoSize = true;
+            this.WOnly.Enabled = false;
+            this.WOnly.Location = new System.Drawing.Point(199, 254);
+            this.WOnly.Name = "WOnly";
+            this.WOnly.Size = new System.Drawing.Size(36, 16);
+            this.WOnly.TabIndex = 31;
+            this.WOnly.Text = "宽";
+            this.WOnly.UseVisualStyleBackColor = true;
+            this.WOnly.CheckedChanged += new System.EventHandler(this.WOnly_CheckedChanged);
             // 
             // panel1
             // 
@@ -255,7 +295,7 @@ namespace RabbitTools
             this.panel2.Controls.Add(this.dirB);
             this.panel2.Controls.Add(this.step3);
             this.panel2.Controls.Add(this.dirT);
-            this.panel2.Location = new System.Drawing.Point(6, 162);
+            this.panel2.Location = new System.Drawing.Point(6, 159);
             this.panel2.Name = "panel2";
             this.panel2.Size = new System.Drawing.Size(268, 113);
             this.panel2.TabIndex = 32;
@@ -383,7 +423,7 @@ namespace RabbitTools
             // 
             this.panel4.Controls.Add(this.btnOperate);
             this.panel4.Controls.Add(this.step4);
-            this.panel4.Location = new System.Drawing.Point(6, 565);
+            this.panel4.Location = new System.Drawing.Point(6, 588);
             this.panel4.Name = "panel4";
             this.panel4.Size = new System.Drawing.Size(268, 49);
             this.panel4.TabIndex = 35;
@@ -468,5 +508,8 @@ namespace RabbitTools
         private System.Windows.Forms.Label dirFL;
         private System.Windows.Forms.CheckBox pr3;
         private System.Windows.Forms.CheckBox pr4;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.CheckBox HOnly;
+        private System.Windows.Forms.CheckBox WOnly;
     }
 }
