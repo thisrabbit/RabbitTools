@@ -187,6 +187,7 @@
   -->
   <ItemGroup>
     <Compile Include="Bezier.cs" />
+    <Compile Include="ColorTable.cs" />
     <Compile Include="ComparableVector2.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>

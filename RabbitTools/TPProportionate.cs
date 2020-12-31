@@ -1,16 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using Office = Microsoft.Office.Core;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
-
 
 namespace RabbitTools
 {
@@ -18,19 +9,28 @@ namespace RabbitTools
     public partial class TPProportionate : UserControl
     {
         PowerPoint.Application app = Globals.ThisAddIn.Application;
+
         Graphics g;
         Pen p;
+        Font f = new Font(new FontFamily("arial"), 6);
+
         double[] nums;
+
         // data[0] = [minWidthIndex, maxWidthIndex, minHeightIndex, maxHeightIndex]
         float[,] data;
+
         PowerPoint.Selection sel;
         // Writeable SelectionRange
         PowerPoint.Shape[] wsr;
+
         string dir = "CTR";
+
         // [PresetForWidth, PresetForHeight]
         string[] preset = new string[2];
+
         // Be true if Width == Height for all shapes
         bool uniControl = true;
+
         ///[WidthLeftCorNerX,   WLCNY, 
         /// WidthLeftConTrolX,  WLCTY,
         /// WidthRightConTrolX, WRCTY,
@@ -49,7 +49,7 @@ namespace RabbitTools
             SetStyle(ControlStyles.DoubleBuffer, true);
 
             g = canvas.CreateGraphics();
-            p = new Pen(Color.LightGray, 1);
+            p = new Pen(ColorTable.Axis, 1);
 
             app.WindowSelectionChange +=
                 new PowerPoint.EApplication_WindowSelectionChangeEventHandler(HandleWindowSelectionChanged);
@@ -171,27 +171,32 @@ namespace RabbitTools
         {
             if (mode == "refresh")
             {
-                g.Clear(Color.FromArgb(230, 230, 230));
+                g.Clear(ColorTable.BG);
             }
             else if (mode == "init")
             {
                 DrawCanvasClear("refresh");
-                p.Color = Color.LightGray;
+                p.Color = ColorTable.Axis;
                 p.Width = 1;
                 g.DrawLine(p, 0, 0, 250, 200);
             }
         }
 
-        // mode = 'x', 'y'
-        private int ConvertCoord(char mode, int value)
+        // mode = "X", "Y", "IX"(Inverse X), "IY"
+        private int MapCoord(string mode, int value)
         {
-            if (mode == 'x')
+            switch (mode)
             {
-                return (int)((float)value / 250f * 230f + 10f);
-            }
-            else
-            {
-                return (int)((float)value / 200f * 180f + 10f);
+                case "X":
+                    return (int)((float)value / 250f * 230f + 10f);
+                case "Y":
+                    return (int)((float)value / 200f * 180f + 10f);
+                case "IX":
+                    return 0;
+                case "IY":
+                    return 0;
+                default:
+                    return 0;
             }
         }
         
@@ -229,34 +234,33 @@ namespace RabbitTools
             else
                 y0 = (int)(YMax / YRange * 200);
             
-            int convertedY0 = ConvertCoord('y', y0);
+            int MapedY0 = MapCoord("Y", y0);
 
-            p.Color = Color.LightGray;
+            p.Color = ColorTable.Axis;
             p.Width = 1;
-
-            g.DrawLine(p, 0, convertedY0, 250, convertedY0);
+            g.DrawLine(p, 0, MapedY0, 250, MapedY0);
             
-            p.Color = Color.DarkGray;
-            p.Width = 4;
             for (int i = 1; i <= count; i++)
             {
-                g.DrawPie(p, 
-                    ConvertCoord('x',
-                        (int)((nums[i] - nums[1]) / XRange * 250)), 
-                    convertedY0, 4, 4, 0, 360);
+                g.FillEllipse(ColorTable.AxisPointBrush,
+                    MapCoord("X",
+                        (int)((nums[i] - nums[1]) / XRange * 250)) - 5,
+                    MapedY0 - 5, 10, 10);
             }
 
             char currentXOnlyState = TestCurrentXOnlyState();
 
+            SolidBrush SBSelected;
             int offset = 2;
-            string axis = "W";
             // Draw width points
             if (this.dir != "T" && this.dir != "B")
             {
+                string axis = "W";
+
                 if (currentXOnlyState == 'H')
-                    p.Color = Color.FromArgb(50, 237, 125, 49);
+                    SBSelected = ColorTable.WidthTintBrush;
                 else
-                    p.Color = Color.FromArgb(200, 237, 125, 49);
+                    SBSelected = ColorTable.WidthBrush;
 
                 if (this.dir == "L" || this.dir == "R")
                     offset = 0;
@@ -264,13 +268,11 @@ namespace RabbitTools
                 {
                     if (currentXOnlyState == 'U')
                     {
-                        p.Color = Color.FromArgb(200, 206, 49, 237);
+                        SBSelected = ColorTable.UniBrush;
                         offset = 0;
                         axis = "W&H";
                     }
                 }
-
-                p.Width = 2;
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -288,15 +290,13 @@ namespace RabbitTools
                         curvePoint[7] = y;
                     }
 
-                    g.DrawPie(p,
-                        ConvertCoord('x', x),
-                        ConvertCoord('y', y),
-                        4, 4, 0, 360);
+                    g.FillEllipse(SBSelected,
+                        MapCoord("X", x) - 4,
+                        MapCoord("Y", y) - 4,
+                        8, 8);
                 }
 
-                g.DrawString(axis, 
-                    new Font(new FontFamily("arial"), 6), new SolidBrush(p.Color), 
-                    0, y0 <= 100 ? 190 : 0);
+                g.DrawString(axis, f, SBSelected, 0, y0 <= 100 ? 190 : 0);
             }
 
             // Draw height points
@@ -309,12 +309,11 @@ namespace RabbitTools
                     offset = 0;
                 else
                     offset = 2;
-                
+
                 if (currentXOnlyState == 'W')
-                    p.Color = Color.FromArgb(50, 68, 114, 196);
+                    SBSelected = ColorTable.HeightTintBrush;
                 else
-                    p.Color = Color.FromArgb(200, 68, 114, 196);
-                p.Width = 2;
+                    SBSelected = ColorTable.HeightBrush;
 
                 for (int i = 1; i <= count; i++)
                 {
@@ -332,19 +331,95 @@ namespace RabbitTools
                         curvePoint[15] = y;
                     }
 
-                    g.DrawPie(p,
-                        ConvertCoord('x', x),
-                        ConvertCoord('y', y),
-                        4, 4, 0, 360);
+                    g.FillEllipse(SBSelected,
+                        MapCoord("X", x) - 4,
+                        MapCoord("Y", y) - 4,
+                        8, 8);
                 }
 
-                g.DrawString("H", new Font(new FontFamily("arial"), 6), new SolidBrush(p.Color), 243, y0 <= 100 ? 190 : 0);
+                g.DrawString("H", f, SBSelected, 243, y0 <= 100 ? 190 : 0);
             }
         }
 
-        private void DrawCanvasControlHandle()
+        /// dir = "LX", "LY", "RX", "RY", 
+        ///       "ILX"(Inverse Left), "ILY", "IRX"(Inverse Right), "IRY"
+        private int MapControlPoint(string dir, int value)
         {
-            // TODO: fill this function & add uniControl print
+            switch (dir)
+            {
+                case "LX":
+                    return value / 3 * 2;
+                case "LY":
+                    return 200 - (200 - value) / 3 * 2;
+                case "RX":
+                    return 250 - (250 - value) / 3 * 2;
+                case "RY":
+                    return value / 3 * 2;
+                case "ILX":
+                    return 0;
+                case "ILY":
+                    return 0;
+                case "IRX":
+                    return 0;
+                case "IRY":
+                    return 0;
+                default:
+                    return 0;
+            }
+        }
+
+        // Draw one pair of control points at a time
+        private void DrawCanvasControlHandle(char compiledMode)
+        {
+            if (compiledMode == 'W' || compiledMode == 'U')
+            {
+                if (compiledMode == 'W')
+                    p.Color = Color.DarkGray;
+                else
+                    p.Color = Color.DarkGray;
+
+                g.DrawLine(p, 
+                    MapCoord("X", curvePoint[0]), 
+                    MapCoord("Y", curvePoint[1]), 
+                    MapCoord("X", MapControlPoint("LX", curvePoint[2])), 
+                    MapCoord("Y", MapControlPoint("LY", curvePoint[3])));
+                g.DrawLine(p,
+                    MapCoord("X", MapControlPoint("RX", curvePoint[4])),
+                    MapCoord("Y", MapControlPoint("RY", curvePoint[5])),
+                    MapCoord("X", curvePoint[6]),
+                    MapCoord("Y", curvePoint[7]));
+                g.DrawRectangle(p, 
+                    MapCoord("X", MapControlPoint("LX", curvePoint[2]) - 3), 
+                    MapCoord("Y", MapControlPoint("LY", curvePoint[3]) - 3),
+                    6, 6);
+                g.DrawRectangle(p,
+                    MapCoord("X", MapControlPoint("RX", curvePoint[4]) - 3),
+                    MapCoord("Y", MapControlPoint("RY", curvePoint[5]) - 3),
+                    6, 6);
+            }
+            else if (compiledMode == 'H')
+            {
+                p.Color = Color.DarkGray;
+
+                g.DrawLine(p,
+                    MapCoord("X", curvePoint[8]),
+                    MapCoord("Y", curvePoint[9]),
+                    MapCoord("X", MapControlPoint("LX", curvePoint[10])),
+                    MapCoord("Y", MapControlPoint("LY", curvePoint[11])));
+                g.DrawLine(p,
+                    MapCoord("X", MapControlPoint("RX", curvePoint[12])),
+                    MapCoord("Y", MapControlPoint("RY", curvePoint[13])),
+                    MapCoord("X", curvePoint[14]),
+                    MapCoord("Y", curvePoint[15]));
+                g.DrawRectangle(p,
+                    MapCoord("X", MapControlPoint("LX", curvePoint[10]) - 3),
+                    MapCoord("Y", MapControlPoint("LY", curvePoint[11]) - 3),
+                    6, 6);
+                g.DrawRectangle(p,
+                    MapCoord("X", MapControlPoint("RX", curvePoint[12]) - 3),
+                    MapCoord("Y", MapControlPoint("YX", curvePoint[13]) - 3),
+                    6, 6);
+            }
         }
 
         // Draw one single curve at a time
@@ -377,51 +452,57 @@ namespace RabbitTools
 
             if (mode == 'W' || (mode == 'U' && this.dir.Length == 1))
             {
-                p.Color = Color.FromArgb(150, 237, 125, 49);
+                p.Color = ColorTable.WidthLine;
                 if (mode== 'U' && (this.dir == "T" || this.dir == "B"))
-                    p.Color = Color.FromArgb(150, 68, 114, 196);
+                    p.Color = ColorTable.UniLine;
 
                 p.Width = 2;
 
                 g.DrawBezier(p, 
-                    ConvertCoord('x', curvePoint[0]),
-                    ConvertCoord('y', curvePoint[1]),
-                    ConvertCoord('x', curvePoint[2]),
-                    ConvertCoord('y', curvePoint[3]),
-                    ConvertCoord('x', curvePoint[4]),
-                    ConvertCoord('y', curvePoint[5]),
-                    ConvertCoord('x', curvePoint[6]),
-                    ConvertCoord('y', curvePoint[7]));
+                    MapCoord("X", curvePoint[0]),
+                    MapCoord("Y", curvePoint[1]),
+                    MapCoord("X", curvePoint[2]),
+                    MapCoord("Y", curvePoint[3]),
+                    MapCoord("X", curvePoint[4]),
+                    MapCoord("Y", curvePoint[5]),
+                    MapCoord("X", curvePoint[6]),
+                    MapCoord("Y", curvePoint[7]));
+
+                DrawCanvasControlHandle('W');
             }
             else if (mode == 'H')
             {
-                p.Color = Color.FromArgb(150, 68, 114, 196);
+                p.Color = ColorTable.HeightLine;
                 p.Width = 2;
 
                 g.DrawBezier(p,
-                    ConvertCoord('x', curvePoint[8]),
-                    ConvertCoord('y', curvePoint[9]),
-                    ConvertCoord('x', curvePoint[10]),
-                    ConvertCoord('y', curvePoint[11]),
-                    ConvertCoord('x', curvePoint[12]),
-                    ConvertCoord('y', curvePoint[13]),
-                    ConvertCoord('x', curvePoint[14]),
-                    ConvertCoord('y', curvePoint[15]));
+                    MapCoord("X", curvePoint[8]),
+                    MapCoord("Y", curvePoint[9]),
+                    MapCoord("X", curvePoint[10]),
+                    MapCoord("Y", curvePoint[11]),
+                    MapCoord("X", curvePoint[12]),
+                    MapCoord("Y", curvePoint[13]),
+                    MapCoord("X", curvePoint[14]),
+                    MapCoord("Y", curvePoint[15]));
+
+                DrawCanvasControlHandle('H');
             }
             else
             {
-                p.Color = Color.FromArgb(150, 206, 49, 237);
+                p.Color = ColorTable.UniLine;
                 p.Width = 2;
 
                 g.DrawBezier(p,
-                    ConvertCoord('x', curvePoint[0]),
-                    ConvertCoord('y', curvePoint[1]),
-                    ConvertCoord('x', curvePoint[2]),
-                    ConvertCoord('y', curvePoint[3]),
-                    ConvertCoord('x', curvePoint[4]),
-                    ConvertCoord('y', curvePoint[5]),
-                    ConvertCoord('x', curvePoint[6]),
-                    ConvertCoord('y', curvePoint[7]));
+                    MapCoord("X", curvePoint[0]),
+                    MapCoord("Y", curvePoint[1]),
+                    MapCoord("X", curvePoint[2]),
+                    MapCoord("Y", curvePoint[3]),
+                    MapCoord("X", curvePoint[4]),
+                    MapCoord("Y", curvePoint[5]),
+                    MapCoord("X", curvePoint[6]),
+                    MapCoord("Y", curvePoint[7]));
+
+                DrawCanvasControlHandle('U');
             }
         }
 

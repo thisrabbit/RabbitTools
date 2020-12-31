@@ -1,17 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using Office = Microsoft.Office.Core;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
-using Microsoft.Office.Interop.PowerPoint;
-using Microsoft.VisualStudio.Tools.Applications.Runtime;
-using System.Numerics;
 
 namespace RabbitTools
 {
