@@ -34,7 +34,6 @@ namespace RabbitTools
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.pr4 = new System.Windows.Forms.CheckBox();
             this.pr3 = new System.Windows.Forms.CheckBox();
-            this.pr1 = new System.Windows.Forms.CheckBox();
             this.step2 = new System.Windows.Forms.Label();
             this.canvas = new System.Windows.Forms.PictureBox();
             this.label8 = new System.Windows.Forms.Label();
@@ -62,6 +61,7 @@ namespace RabbitTools
             this.panel4 = new System.Windows.Forms.Panel();
             this.btnOperate = new System.Windows.Forms.Button();
             this.step4 = new System.Windows.Forms.Label();
+            this.pr1 = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.canvas)).BeginInit();
             this.panel3.SuspendLayout();
@@ -95,9 +95,9 @@ namespace RabbitTools
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.pr1);
             this.groupBox1.Controls.Add(this.pr4);
             this.groupBox1.Controls.Add(this.pr3);
-            this.groupBox1.Controls.Add(this.pr1);
             this.groupBox1.Controls.Add(this.pr2);
             this.groupBox1.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
             this.groupBox1.Location = new System.Drawing.Point(18, 20);
@@ -130,18 +130,6 @@ namespace RabbitTools
             this.pr3.TabIndex = 24;
             this.pr3.Text = "所选形状的数字不全一样";
             this.pr3.UseVisualStyleBackColor = true;
-            // 
-            // pr1
-            // 
-            this.pr1.AutoCheck = false;
-            this.pr1.AutoSize = true;
-            this.pr1.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.pr1.Location = new System.Drawing.Point(6, 18);
-            this.pr1.Name = "pr1";
-            this.pr1.Size = new System.Drawing.Size(126, 16);
-            this.pr1.TabIndex = 23;
-            this.pr1.Text = "选择了至少2个形状";
-            this.pr1.UseVisualStyleBackColor = true;
             // 
             // step2
             // 
@@ -451,6 +439,18 @@ namespace RabbitTools
             this.step4.TabIndex = 23;
             this.step4.Text = "步骤4：进行尺寸调整";
             // 
+            // pr1
+            // 
+            this.pr1.AutoCheck = false;
+            this.pr1.AutoSize = true;
+            this.pr1.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.pr1.Location = new System.Drawing.Point(6, 20);
+            this.pr1.Name = "pr1";
+            this.pr1.Size = new System.Drawing.Size(126, 16);
+            this.pr1.TabIndex = 26;
+            this.pr1.Text = "选择了至少3个形状";
+            this.pr1.UseVisualStyleBackColor = true;
+            // 
             // TPProportionate
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -490,7 +490,6 @@ namespace RabbitTools
         private System.Windows.Forms.Panel panel3;
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.CheckBox pr2;
-        private System.Windows.Forms.CheckBox pr1;
         private System.Windows.Forms.Panel panel2;
         private System.Windows.Forms.Button dirCTR;
         private System.Windows.Forms.Button dirBR;
@@ -511,5 +510,6 @@ namespace RabbitTools
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.CheckBox HOnly;
         private System.Windows.Forms.CheckBox WOnly;
+        private System.Windows.Forms.CheckBox pr1;
     }
 }

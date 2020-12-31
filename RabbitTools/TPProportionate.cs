@@ -26,7 +26,7 @@ namespace RabbitTools
         PowerPoint.Selection sel;
         // Writeable SelectionRange
         PowerPoint.Shape[] wsr;
-        string dir;
+        string dir = "CTR";
         // [PresetForWidth, PresetForHeight]
         string[] preset = new string[2];
         // Be true if Width == Height for all shapes
@@ -62,7 +62,7 @@ namespace RabbitTools
 
             if (sel.Type == PowerPoint.PpSelectionType.ppSelectionShapes)
             {
-                if (sel.ShapeRange.Count >= 2)
+                if (sel.ShapeRange.Count >= 3)
                 {
                     pr1.Checked = true;
                     int rCode = GetNumbersFromShapeRange(sel.ShapeRange);
@@ -191,16 +191,13 @@ namespace RabbitTools
             }
             else
             {
-                return (int)((float)value / 200 * 180 + 10);
+                return (int)((float)value / 200f * 180f + 10f);
             }
         }
         
         private void DrawCanvasInfo()
         {
             DrawCanvasClear("refresh");
-
-            p.Color = Color.LightGray;
-            p.Width = 1;
 
             int count = nums.Length - 1;
             float YMax, YMin;
@@ -234,6 +231,9 @@ namespace RabbitTools
             
             int convertedY0 = ConvertCoord('y', y0);
 
+            p.Color = Color.LightGray;
+            p.Width = 1;
+
             g.DrawLine(p, 0, convertedY0, 250, convertedY0);
             
             p.Color = Color.DarkGray;
@@ -248,18 +248,33 @@ namespace RabbitTools
 
             char currentXOnlyState = TestCurrentXOnlyState();
 
-            // Draw width curve
+            int offset = 2;
+            string axis = "W";
+            // Draw width points
             if (this.dir != "T" && this.dir != "B")
             {
                 if (currentXOnlyState == 'H')
                     p.Color = Color.FromArgb(50, 237, 125, 49);
                 else
                     p.Color = Color.FromArgb(200, 237, 125, 49);
+
+                if (this.dir == "L" || this.dir == "R")
+                    offset = 0;
+                else
+                {
+                    if (currentXOnlyState == 'U')
+                    {
+                        p.Color = Color.FromArgb(200, 206, 49, 237);
+                        offset = 0;
+                        axis = "W&H";
+                    }
+                }
+
                 p.Width = 2;
 
                 for (int i = 1; i <= count; i++)
                 {
-                    int x = (int)((nums[i] - nums[1]) / XRange * 250) - 2;
+                    int x = (int)((nums[i] - nums[1]) / XRange * 250) - offset;
                     int y = (int)((YMax - data[i, 2]) / YRange * 200);
 
                     if (i == 1)
@@ -279,12 +294,22 @@ namespace RabbitTools
                         4, 4, 0, 360);
                 }
 
-                g.DrawString("W", new Font(new FontFamily("arial"), 6), new SolidBrush(p.Color), 0, y0 <= 100 ? 190 : 0);
+                g.DrawString(axis, 
+                    new Font(new FontFamily("arial"), 6), new SolidBrush(p.Color), 
+                    0, y0 <= 100 ? 190 : 0);
             }
 
-            // Draw height Curve
+            // Draw height points
             if (this.dir != "L" && this.dir != "R")
             {
+                if (this.dir != "T" && this.dir != "B" && uniControl)
+                    return;
+
+                if (this.dir == "T" || this.dir == "B")
+                    offset = 0;
+                else
+                    offset = 2;
+                
                 if (currentXOnlyState == 'W')
                     p.Color = Color.FromArgb(50, 68, 114, 196);
                 else
@@ -293,8 +318,8 @@ namespace RabbitTools
 
                 for (int i = 1; i <= count; i++)
                 {
-                    int x = (int)((nums[i] - nums[1]) / XRange * 250) + 2;
-                    int y = (int)((YMax - data[i, 2]) / YRange * 200);
+                    int x = (int)((nums[i] - nums[1]) / XRange * 250) + offset;
+                    int y = (int)((YMax - data[i, 3]) / YRange * 200);
 
                     if (i == 1)
                     {
@@ -323,35 +348,39 @@ namespace RabbitTools
         }
 
         // Draw one single curve at a time
+        // offset = 2(width), 10(height)
         private void DrawCanvasCurve(char mode, short offset, string preset)
         {
             switch (preset)
             {
                 case "log":
-                    curvePoint[offset] = 0;
-                    curvePoint[offset + 1] = 200;
-                    curvePoint[offset + 2] = 145; // 0.58 * 250
-                    curvePoint[offset + 3] = 0;
+                    curvePoint[offset + 0] = curvePoint[offset - 2];
+                    curvePoint[offset + 1] = curvePoint[offset - 1];
+                    curvePoint[offset + 2] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.58);
+                    curvePoint[offset + 3] = curvePoint[offset + 5];
                     break;
                 case "pow":
-                    curvePoint[offset] = 105;     // 0.42 * 250
-                    curvePoint[offset + 1] = 200;
-                    curvePoint[offset + 2] = 250;
-                    curvePoint[offset + 3] = 0;
+                    curvePoint[offset + 0] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.42);
+                    curvePoint[offset + 1] = curvePoint[offset - 1];
+                    curvePoint[offset + 2] = curvePoint[offset + 4];
+                    curvePoint[offset + 3] = curvePoint[offset + 5];
                     break;
                 case "custom":
                     break;
                 default:
-                    curvePoint[offset] = 125;     // 0.5 * 250
-                    curvePoint[offset + 1] = 100; // 0.5 * 200
-                    curvePoint[offset + 2] = 125;
-                    curvePoint[offset + 3] = 100;
+                    curvePoint[offset + 0] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.5);
+                    curvePoint[offset + 1] = (int)((curvePoint[offset - 1] + curvePoint[offset + 5]) * 0.5);
+                    curvePoint[offset + 2] = curvePoint[offset + 0];
+                    curvePoint[offset + 3] = curvePoint[offset + 1];
                     break;
             }
 
-            if (mode == 'W')
+            if (mode == 'W' || (mode == 'U' && this.dir.Length == 1))
             {
                 p.Color = Color.FromArgb(150, 237, 125, 49);
+                if (mode== 'U' && (this.dir == "T" || this.dir == "B"))
+                    p.Color = Color.FromArgb(150, 68, 114, 196);
+
                 p.Width = 2;
 
                 g.DrawBezier(p, 
@@ -364,7 +393,7 @@ namespace RabbitTools
                     ConvertCoord('x', curvePoint[6]),
                     ConvertCoord('y', curvePoint[7]));
             }
-            else
+            else if (mode == 'H')
             {
                 p.Color = Color.FromArgb(150, 68, 114, 196);
                 p.Width = 2;
@@ -379,6 +408,21 @@ namespace RabbitTools
                     ConvertCoord('x', curvePoint[14]),
                     ConvertCoord('y', curvePoint[15]));
             }
+            else
+            {
+                p.Color = Color.FromArgb(150, 206, 49, 237);
+                p.Width = 2;
+
+                g.DrawBezier(p,
+                    ConvertCoord('x', curvePoint[0]),
+                    ConvertCoord('y', curvePoint[1]),
+                    ConvertCoord('x', curvePoint[2]),
+                    ConvertCoord('y', curvePoint[3]),
+                    ConvertCoord('x', curvePoint[4]),
+                    ConvertCoord('y', curvePoint[5]),
+                    ConvertCoord('x', curvePoint[6]),
+                    ConvertCoord('y', curvePoint[7]));
+            }
         }
 
         private void Activate(PowerPoint.Selection sel)
@@ -387,8 +431,9 @@ namespace RabbitTools
             if (pr1.Checked && pr2.Checked && pr3.Checked && pr4.Checked)
             {
                 btnOperate.Enabled = true;
-                DrawCanvasInfo();
                 ChangeXOnlyStates('E');
+                DrawCanvasInfo();
+                HandlePresetChange(TestCurrentXOnlyState(), "");
 
                 this.sel = sel;
             }
@@ -409,6 +454,7 @@ namespace RabbitTools
             pr2.Checked = false;
             pr3.Checked = false;
             pr4.Checked = false;
+            uniControl = true;
             nums = null;
             data = null;
             sel = null;
@@ -416,6 +462,7 @@ namespace RabbitTools
             DrawCanvasClear("init");
             ChangeXOnlyStates('D');
             HandlePresetChange('C', "");
+            HandleDirFLChange("CTR");
             btnOperate.Enabled = false;
         }
 
@@ -474,7 +521,7 @@ namespace RabbitTools
                     dirFL.Left = 210;
                     ChangeXOnlyStates('E');
                     break;
-                default:
+                case "CTR":
                     dirFL.Text = "中心";
                     dirFL.Top = 57;
                     dirFL.Left = 129;
@@ -555,6 +602,10 @@ namespace RabbitTools
                     this.preset[1] = preset == "" ? this.preset[1] : preset;
                     DrawCanvasCurve('H', 10, this.preset[1]);
                     break;
+                case 'U':       // UniControl
+                    this.preset[0] = preset == "" ? this.preset[0] : preset;
+                    DrawCanvasCurve('U', 2, this.preset[0]);
+                    break;
                 case 'C':       // Clear
                     this.preset[0] = "linear";
                     this.preset[1] = "linear";
@@ -600,7 +651,9 @@ namespace RabbitTools
             }
             else
             {
-                if (this.dir == "L" || this.dir == "R")
+                if (uniControl)
+                    return 'U';
+                else if (this.dir == "L" || this.dir == "R")
                     return 'W';
                 else
                     return 'H';
@@ -613,7 +666,7 @@ namespace RabbitTools
             {
                 case 'E':
                     if (this.dir != "T" && this.dir != "B" && 
-                        this.dir != "L" && this.dir != "R")
+                        this.dir != "L" && this.dir != "R" && !uniControl)
                     {
                         WOnly.Enabled = true;
                         WOnly.Checked = true;
