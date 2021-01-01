@@ -16,11 +16,16 @@ class CubicBezierCurve
         SetControlVerts(cvs);
     }
 
+    public CubicBezierCurve(float x1, float y1, float x2, float y2)
+    {
+        SetControlVerts(new Vector2[2] {new Vector2(x1, y1), new Vector2(x2, y2)});
+    }
+
     public void SetControlVerts(Vector2[] cvs)
     {
         if (cvs.Length != 2)
         {
-            throw new Exception("生成贝塞尔曲线出错，控制点数目不足2");
+            throw new Exception("生成贝塞尔曲线出错，控制点数目不为2");
         }
         controlVerts = new Vector2[4] { 
             new Vector2(0, 0), cvs[0], cvs[1], new Vector2(1, 1) };
@@ -42,6 +47,17 @@ class CubicBezierCurve
 
         Vector2 point = controlVerts[0] * bb0 + controlVerts[1] * bb1 + controlVerts[2] * bb2 + controlVerts[3] * bb3;
         return point;
+    }
+
+    public float FromXToY(float X)
+    {
+        float a = 3 * controlVerts[1].X - 3 * controlVerts[2].X + 1;
+        float b = -6 * controlVerts[1].X + 3 * controlVerts[2].X;
+        float c = 3 * controlVerts[1].X;
+        float d = -X;
+
+        // TODO: solve cubic function
+        return 0f;
     }
 
     //public Vector2 GetTangent(float t)                          // t E [0, 1].

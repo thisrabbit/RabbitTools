@@ -32,6 +32,7 @@ namespace RabbitTools
             this.step1 = new System.Windows.Forms.Label();
             this.pr2 = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.pr1 = new System.Windows.Forms.CheckBox();
             this.pr4 = new System.Windows.Forms.CheckBox();
             this.pr3 = new System.Windows.Forms.CheckBox();
             this.step2 = new System.Windows.Forms.Label();
@@ -61,7 +62,6 @@ namespace RabbitTools
             this.panel4 = new System.Windows.Forms.Panel();
             this.btnOperate = new System.Windows.Forms.Button();
             this.step4 = new System.Windows.Forms.Label();
-            this.pr1 = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.canvas)).BeginInit();
             this.panel3.SuspendLayout();
@@ -107,6 +107,18 @@ namespace RabbitTools
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "进行下一步要满足的条件：";
             // 
+            // pr1
+            // 
+            this.pr1.AutoCheck = false;
+            this.pr1.AutoSize = true;
+            this.pr1.ForeColor = System.Drawing.SystemColors.ControlText;
+            this.pr1.Location = new System.Drawing.Point(6, 20);
+            this.pr1.Name = "pr1";
+            this.pr1.Size = new System.Drawing.Size(126, 16);
+            this.pr1.TabIndex = 26;
+            this.pr1.Text = "选择了至少3个形状";
+            this.pr1.UseVisualStyleBackColor = true;
+            // 
             // pr4
             // 
             this.pr4.AutoCheck = false;
@@ -149,12 +161,9 @@ namespace RabbitTools
             this.canvas.Size = new System.Drawing.Size(250, 200);
             this.canvas.TabIndex = 24;
             this.canvas.TabStop = false;
-            this.canvas.MouseDown += 
-                new System.Windows.Forms.MouseEventHandler(this.canvas_MouseDown);
-            this.canvas.MouseMove +=
-                new System.Windows.Forms.MouseEventHandler(this.canvas_MouseMove);
-            this.canvas.MouseUp += 
-                new System.Windows.Forms.MouseEventHandler(this.canvas_MouseUp);
+            this.canvas.MouseDown += new System.Windows.Forms.MouseEventHandler(this.canvas_MouseDown);
+            this.canvas.MouseMove += new System.Windows.Forms.MouseEventHandler(this.canvas_MouseMove);
+            this.canvas.MouseUp += new System.Windows.Forms.MouseEventHandler(this.canvas_MouseUp);
             // 
             // label8
             // 
@@ -169,6 +178,7 @@ namespace RabbitTools
             // 
             // presetLinear
             // 
+            this.presetLinear.Enabled = false;
             this.presetLinear.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.presetLinear.Location = new System.Drawing.Point(77, 20);
             this.presetLinear.Name = "presetLinear";
@@ -180,6 +190,7 @@ namespace RabbitTools
             // 
             // presetLog
             // 
+            this.presetLog.Enabled = false;
             this.presetLog.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.presetLog.Location = new System.Drawing.Point(123, 20);
             this.presetLog.Name = "presetLog";
@@ -191,6 +202,7 @@ namespace RabbitTools
             // 
             // presetPow
             // 
+            this.presetPow.Enabled = false;
             this.presetPow.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.presetPow.Location = new System.Drawing.Point(169, 20);
             this.presetPow.Name = "presetPow";
@@ -202,6 +214,7 @@ namespace RabbitTools
             // 
             // presetCustom
             // 
+            this.presetCustom.Enabled = false;
             this.presetCustom.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.presetCustom.Location = new System.Drawing.Point(214, 20);
             this.presetCustom.Name = "presetCustom";
@@ -440,18 +453,6 @@ namespace RabbitTools
             this.step4.Size = new System.Drawing.Size(123, 17);
             this.step4.TabIndex = 23;
             this.step4.Text = "步骤4：进行尺寸调整";
-            // 
-            // pr1
-            // 
-            this.pr1.AutoCheck = false;
-            this.pr1.AutoSize = true;
-            this.pr1.ForeColor = System.Drawing.SystemColors.ControlText;
-            this.pr1.Location = new System.Drawing.Point(6, 20);
-            this.pr1.Name = "pr1";
-            this.pr1.Size = new System.Drawing.Size(126, 16);
-            this.pr1.TabIndex = 26;
-            this.pr1.Text = "选择了至少3个形状";
-            this.pr1.UseVisualStyleBackColor = true;
             // 
             // TPProportionate
             // 

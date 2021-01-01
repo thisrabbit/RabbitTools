@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RabbitTools
 {
@@ -16,14 +11,14 @@ namespace RabbitTools
             this.Y = Y;
         }
 
-        private float distance(ComparableVector2 v)
+        private float Distance(ComparableVector2 v)
         {
             return (float)Math.Sqrt(Math.Pow(v.X, 2) + Math.Pow(v.Y, 2));
         }
         
         public int CompareTo(Object o)
         {
-            return (int)(distance(this) - distance((ComparableVector2)o));
+            return (int)(Distance(this) - Distance((ComparableVector2)o));
         }
     }
 }

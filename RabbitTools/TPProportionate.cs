@@ -709,7 +709,12 @@ namespace RabbitTools
         {
             if (this.sel != null)
                 DrawCanvasInfo();
-            
+
+            presetLinear.Enabled = true;
+            presetLog.Enabled = true;
+            presetPow.Enabled = true;
+            presetCustom.Enabled = true;
+
             switch (mode)
             {
                 case 'A':       // All
@@ -733,6 +738,10 @@ namespace RabbitTools
                 case 'C':       // Clear
                     this.preset[0] = "linear";
                     this.preset[1] = "linear";
+                    presetLinear.Enabled = false;
+                    presetLog.Enabled = false;
+                    presetPow.Enabled = false;
+                    presetCustom.Enabled = false;
                     break;
             }
         }
@@ -842,9 +851,55 @@ namespace RabbitTools
             }
         }
 
-        private void btnOperate_Click(object sender, EventArgs e)
-        {
+        CubicBezierCurve bezier;
 
+        private void btnOperate_Click(object sender, EventArgs e)
+        {   
+            switch (this.dir)
+            {
+                case "TL":
+                    bezier = new CubicBezierCurve(
+                        (this.curvePoint[2] - this.curvePoint[0]) / 250f,
+                        Math.Abs(this.curvePoint[1] - this.curvePoint[3]) / 
+                            Math.Abs(this.curvePoint[1] - this.curvePoint[7]),
+                        (this.curvePoint[4] - this.curvePoint[0]) / 250f,
+                        Math.Abs(this.curvePoint[1] - this.curvePoint[5]) / 
+                            Math.Abs(this.curvePoint[1] - this.curvePoint[7]));
+                    break;
+                case "T":
+                    break;
+                case "TR":
+                    break;
+                case "L":
+                    break;
+                case "CTR":
+                    break;
+                case "R":
+                    break;
+                case "BL":
+                    break;
+                case "B":
+                    bezier = new CubicBezierCurve(
+                        (this.curvePoint[10] - this.curvePoint[8]) / 250f,
+                        (float)(this.curvePoint[9] - this.curvePoint[11]) /
+                            (float)(this.curvePoint[9] - this.curvePoint[15]),
+                        (this.curvePoint[12] - this.curvePoint[8]) / 250f,
+                        (float)(this.curvePoint[9] - this.curvePoint[13]) /
+                            (float)(this.curvePoint[9] - this.curvePoint[15]));
+
+                    for (int i = 2; i <= this.nums.Length - 2; i++)
+                    {
+                        this.wsr[i].Height =
+                            Math.Abs(this.data[i, 3] +
+                            bezier.GetPoint(
+                                (float)(nums[i] - nums[1]) / (float)(nums[nums.Length - 1] - nums[1])
+                                ).Y * 
+                                (this.data[(int)this.data[0, 3], 3] - this.data[(int)this.data[0, 2], 3]));
+                    }
+                    break;
+                case "BR":
+                    break;
+            }
         }
     }
 }
