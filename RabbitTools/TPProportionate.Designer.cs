@@ -149,6 +149,12 @@ namespace RabbitTools
             this.canvas.Size = new System.Drawing.Size(250, 200);
             this.canvas.TabIndex = 24;
             this.canvas.TabStop = false;
+            this.canvas.MouseDown += 
+                new System.Windows.Forms.MouseEventHandler(this.canvas_MouseDown);
+            this.canvas.MouseMove +=
+                new System.Windows.Forms.MouseEventHandler(this.canvas_MouseMove);
+            this.canvas.MouseUp += 
+                new System.Windows.Forms.MouseEventHandler(this.canvas_MouseUp);
             // 
             // label8
             // 
@@ -163,11 +169,7 @@ namespace RabbitTools
             // 
             // presetLinear
             // 
-            this.presetLinear.BackColor = System.Drawing.SystemColors.Control;
-            this.presetLinear.FlatAppearance.BorderColor = System.Drawing.Color.Black;
-            this.presetLinear.FlatAppearance.BorderSize = 0;
             this.presetLinear.FlatStyle = System.Windows.Forms.FlatStyle.System;
-            this.presetLinear.ForeColor = System.Drawing.SystemColors.ControlText;
             this.presetLinear.Location = new System.Drawing.Point(77, 20);
             this.presetLinear.Name = "presetLinear";
             this.presetLinear.Size = new System.Drawing.Size(40, 23);

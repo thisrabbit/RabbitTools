@@ -24,5 +24,10 @@ namespace RabbitTools
         public static SolidBrush UniBrush =
             new SolidBrush(Color.FromArgb(200, 206, 49, 237));
         public static Color UniLine = Color.FromArgb(150, 206, 49, 237);
+
+        public static Color ControlLine = Color.FromArgb(127, 127, 127);
+        public static SolidBrush ControlPointOuterBrush = new SolidBrush(ControlLine);
+        public static SolidBrush ControlPointInnerBrush = 
+            new SolidBrush(BG);
     }
 }
