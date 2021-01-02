@@ -10,6 +10,8 @@ namespace RabbitTools
     {
         PowerPoint.Application app = Globals.ThisAddIn.Application;
 
+        // TODO: Refactor state management code!!!
+
         Graphics g;
         Pen p;
         Font f = new Font(new FontFamily("arial"), 6);
@@ -137,8 +139,8 @@ namespace RabbitTools
 
             FindMinMaxdata(sr.Count);
 
-            if (((dir != "L" && dir != "R") && (data[0, 2] >= data[0, 3])) ||
-                ((dir != "T" && dir != "B") && (data[0, 0] >= data[0, 1])))
+            if (((dir != "L" && dir != "R") && (data[1, 3] >= data[nums.Length - 1, 3])) ||
+                ((dir != "T" && dir != "B") && (data[1, 2] >= data[nums.Length - 1, 2])))
             {
                 nums = null;
                 wsr = null;
@@ -557,6 +559,7 @@ namespace RabbitTools
                 btnOperate.Enabled = true;
                 ChangeXOnlyStates('E');
                 DrawCanvasInfo();
+                
                 HandlePresetChange(TestCurrentXOnlyState(), "");
 
                 this.sel = sel;
@@ -588,6 +591,19 @@ namespace RabbitTools
             HandlePresetChange('C', "");
             HandleDirFLChange("CTR");
             btnOperate.Enabled = false;
+        }
+
+        private void ChangeDirBtnGroupState(bool state)
+        {
+            dirTL.Enabled = state;
+            dirT.Enabled = state;
+            dirTR.Enabled = state;
+            dirL.Enabled = state;
+            dirCTR.Enabled = state;
+            dirR.Enabled = state;
+            dirBL.Enabled = state;
+            dirB.Enabled = state;
+            dirBR.Enabled = state;
         }
 
         private void HandleDirFLChange(string dir)
@@ -653,11 +669,8 @@ namespace RabbitTools
                     break;
             }
 
-            if (sel != null)
-            {
-                HandleWindowSelectionChanged(sel);
-                HandlePresetChange(TestCurrentXOnlyState(), "");
-            }
+            HandleWindowSelectionChanged(sel);
+            HandlePresetChange(TestCurrentXOnlyState(), "");
         }
 
         private void dirTL_Click(object sender, EventArgs e)
@@ -823,8 +836,11 @@ namespace RabbitTools
                     WOnly.Checked = true;
                 }
 
-                DrawCanvasInfo();
-                HandlePresetChange(TestCurrentXOnlyState(), "");
+                if (this.sel != null)
+                {
+                    DrawCanvasInfo();
+                    HandlePresetChange(TestCurrentXOnlyState(), "");
+                }
             } 
             else if (isChangedManually)
             {
@@ -842,8 +858,11 @@ namespace RabbitTools
                     HOnly.Checked = true;
                 }
 
-                DrawCanvasInfo();
-                HandlePresetChange(TestCurrentXOnlyState(), "");
+                if (this.sel != null)
+                {
+                    DrawCanvasInfo();
+                    HandlePresetChange(TestCurrentXOnlyState(), "");
+                }
             }
             else if (isChangedManually)
             {
@@ -866,18 +885,46 @@ namespace RabbitTools
                         Math.Abs(this.curvePoint[1] - this.curvePoint[5]) / 
                             Math.Abs(this.curvePoint[1] - this.curvePoint[7]));
                     break;
+
                 case "T":
+                    bezier = new CubicBezierCurve(
+                        (this.curvePoint[10] - this.curvePoint[8]) / 250f,
+                        (float)(this.curvePoint[9] - this.curvePoint[11]) /
+                            (float)(this.curvePoint[9] - this.curvePoint[15]),
+                        (this.curvePoint[12] - this.curvePoint[8]) / 250f,
+                        (float)(this.curvePoint[9] - this.curvePoint[13]) /
+                            (float)(this.curvePoint[9] - this.curvePoint[15]));
+
+                    for (int i = 2; i <= this.nums.Length - 2; i++)
+                    {
+                        float prevH = this.wsr[i].Height;
+                        
+                        this.wsr[i].Height =
+                            Math.Abs(this.data[1, 3] +
+                            bezier.GetPoint(bezier.GetClosestParam(
+                                (float)(nums[i] - nums[1]) / (float)(nums[nums.Length - 1] - nums[1])
+                            )).Y *
+                            (this.data[nums.Length - 1, 3] - this.data[1, 3]));
+
+                        this.wsr[i].Top -= this.wsr[i].Height - prevH;
+                    }
                     break;
+
                 case "TR":
                     break;
+
                 case "L":
                     break;
+
                 case "CTR":
                     break;
+
                 case "R":
                     break;
+
                 case "BL":
                     break;
+
                 case "B":
                     bezier = new CubicBezierCurve(
                         (this.curvePoint[10] - this.curvePoint[8]) / 250f,
@@ -890,16 +937,19 @@ namespace RabbitTools
                     for (int i = 2; i <= this.nums.Length - 2; i++)
                     {
                         this.wsr[i].Height =
-                            Math.Abs(this.data[i, 3] +
-                            bezier.GetPoint(
+                            Math.Abs(this.data[1, 3] +
+                            bezier.GetPoint(bezier.GetClosestParam(
                                 (float)(nums[i] - nums[1]) / (float)(nums[nums.Length - 1] - nums[1])
-                                ).Y * 
-                                (this.data[(int)this.data[0, 3], 3] - this.data[(int)this.data[0, 2], 3]));
+                            )).Y * 
+                            (this.data[nums.Length - 1, 3] - this.data[1, 3]));
                     }
                     break;
+
                 case "BR":
                     break;
             }
+
+            HandleWindowSelectionChanged(this.sel);
         }
     }
 }

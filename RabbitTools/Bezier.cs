@@ -49,17 +49,6 @@ class CubicBezierCurve
         return point;
     }
 
-    public float FromXToY(float X)
-    {
-        float a = 3 * controlVerts[1].X - 3 * controlVerts[2].X + 1;
-        float b = -6 * controlVerts[1].X + 3 * controlVerts[2].X;
-        float c = 3 * controlVerts[1].X;
-        float d = -X;
-
-        // TODO: solve cubic function
-        return 0f;
-    }
-
     //public Vector2 GetTangent(float t)                          // t E [0, 1].
     //{
     //    // See: http://bimixual.org/AnimationLibrary/beziertangents.html
@@ -75,36 +64,38 @@ class CubicBezierCurve
     //    return tangent;
     //}
 
-    //public float GetClosestParam(Vector2 pos, float paramThreshold = 0.000001f)
-    //{
-    //    return GetClosestParamRec(pos, 0.0f, 1.0f, paramThreshold);
-    //}
+    public float GetClosestParam(float X, float paramThreshold = 0.000001f)
+    {
+        return GetClosestParamRec(X, 0.0f, 1.0f, paramThreshold);
+    }
 
-    //float GetClosestParamRec(Vector2 pos, float beginT, float endT, float thresholdT)
-    //{
-    //    float mid = (beginT + endT) / 2.0f;
+    /// Bisection solve
+    /// In our problem, the bezier function is monotone increasing.
+    float GetClosestParamRec(float X, float beginT, float endT, float thresholdT)
+    {
+        float mid = (beginT + endT) / 2.0f;
 
-    //    // Base case for recursion.
-    //    if ((endT - beginT) < thresholdT)
-    //        return mid;
+        // Base case for recursion.
+        if ((endT - beginT) < thresholdT)
+            return mid;
 
-    //    // The two halves have param range [start, mid] and [mid, end]. We decide which one to use by using a midpoint param calculation for each section.
-    //    float paramA = (beginT + mid) / 2.0f;
-    //    float paramB = (mid + endT) / 2.0f;
+        // The two halves have param range [start, mid] and [mid, end]. We decide which one to use by using a midpoint param calculation for each section.
+        float paramA = (beginT + mid) / 2.0f;
+        float paramB = (mid + endT) / 2.0f;
 
-    //    Vector2 posA = GetPoint(paramA);
-    //    Vector2 posB = GetPoint(paramB);
-    //    float distASq = (posA - pos).sqrMagnitude;
-    //    float distBSq = (posB - pos).sqrMagnitude;
+        Vector2 posA = GetPoint(paramA);
+        Vector2 posB = GetPoint(paramB);
+        float distASq = Math.Abs(posA.X - X);
+        float distBSq = Math.Abs(posB.X - X);
 
-    //    if (distASq < distBSq)
-    //        endT = mid;
-    //    else
-    //        beginT = mid;
+        if (distASq < distBSq)
+            endT = mid;
+        else
+            beginT = mid;
 
-    //    // The (tail) recursive call.
-    //    return GetClosestParamRec(pos, beginT, endT, thresholdT);
-    //}
+        // The (tail) recursive call.
+        return GetClosestParamRec(X, beginT, endT, thresholdT);
+    }
 }
 
 
