@@ -29,6 +29,7 @@ namespace RabbitTools
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.step1 = new System.Windows.Forms.Label();
             this.pr2 = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
@@ -43,6 +44,7 @@ namespace RabbitTools
             this.presetPow = new System.Windows.Forms.Button();
             this.presetCustom = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.protectZone = new System.Windows.Forms.CheckBox();
             this.label1 = new System.Windows.Forms.Label();
             this.HOnly = new System.Windows.Forms.CheckBox();
             this.WOnly = new System.Windows.Forms.CheckBox();
@@ -62,6 +64,7 @@ namespace RabbitTools
             this.panel4 = new System.Windows.Forms.Panel();
             this.btnOperate = new System.Windows.Forms.Button();
             this.step4 = new System.Windows.Forms.Label();
+            this.TTProtectZone = new System.Windows.Forms.ToolTip(this.components);
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.canvas)).BeginInit();
             this.panel3.SuspendLayout();
@@ -126,9 +129,9 @@ namespace RabbitTools
             this.pr4.ForeColor = System.Drawing.SystemColors.ControlText;
             this.pr4.Location = new System.Drawing.Point(6, 84);
             this.pr4.Name = "pr4";
-            this.pr4.Size = new System.Drawing.Size(216, 16);
+            this.pr4.Size = new System.Drawing.Size(240, 16);
             this.pr4.TabIndex = 25;
-            this.pr4.Text = "最小值形状尺寸小于最大值形状尺寸";
+            this.pr4.Text = "最小数字形状尺寸小于最大数字形状尺寸";
             this.pr4.UseVisualStyleBackColor = true;
             // 
             // pr3
@@ -226,6 +229,7 @@ namespace RabbitTools
             // 
             // panel3
             // 
+            this.panel3.Controls.Add(this.protectZone);
             this.panel3.Controls.Add(this.label1);
             this.panel3.Controls.Add(this.HOnly);
             this.panel3.Controls.Add(this.WOnly);
@@ -240,6 +244,20 @@ namespace RabbitTools
             this.panel3.Name = "panel3";
             this.panel3.Size = new System.Drawing.Size(268, 275);
             this.panel3.TabIndex = 31;
+            // 
+            // protectZone
+            // 
+            this.protectZone.AutoSize = true;
+            this.protectZone.Enabled = false;
+            this.protectZone.Location = new System.Drawing.Point(18, 254);
+            this.protectZone.Name = "protectZone";
+            this.protectZone.Size = new System.Drawing.Size(108, 16);
+            this.protectZone.TabIndex = 34;
+            this.protectZone.Text = "正负变化保护区";
+            this.TTProtectZone.SetToolTip(this.protectZone, "如果最小数字与最大数字异号，\r\n则数字接近0的形状的尺寸会被\r\n调整为0。勾选此项并在面板中\r\n拖动「保护线」至合适位置，则\r\n调整后形状的尺寸不会小于该保\r\n护" +
+        "线的值。");
+            this.protectZone.UseVisualStyleBackColor = true;
+            this.protectZone.Visible = false;
             // 
             // label1
             // 
@@ -464,6 +482,13 @@ namespace RabbitTools
             this.step4.TabIndex = 23;
             this.step4.Text = "步骤4：进行尺寸调整";
             // 
+            // TTProtectZone
+            // 
+            this.TTProtectZone.AutoPopDelay = 360000;
+            this.TTProtectZone.InitialDelay = 500;
+            this.TTProtectZone.ReshowDelay = 100;
+            this.TTProtectZone.ToolTipTitle = "正负变化保护区";
+            // 
             // TPProportionate
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -524,5 +549,7 @@ namespace RabbitTools
         private System.Windows.Forms.CheckBox HOnly;
         private System.Windows.Forms.CheckBox WOnly;
         private System.Windows.Forms.CheckBox pr1;
+        private System.Windows.Forms.CheckBox protectZone;
+        private System.Windows.Forms.ToolTip TTProtectZone;
     }
 }

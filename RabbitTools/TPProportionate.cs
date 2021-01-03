@@ -132,7 +132,7 @@ namespace RabbitTools
 
         private short GetNumbersFromShapeRange(PowerPoint.ShapeRange sr, bool quick = false)
         {
-            // verbose == false means just need a quick check for pr4, 
+            // quick == true means just need a quick check for pr4, 
             // which pr1~3 are already checked and true
             if (!quick)
             {
@@ -475,6 +475,9 @@ namespace RabbitTools
             
             if (mode == 'W' || mode == 'U')
             {
+                if (XOnlyState == 'H')
+                    return;
+
                 g.DrawLine(p, 
                     MapCoord("X", curvePoint[0]), 
                     MapCoord("Y", curvePoint[1]), 
@@ -504,6 +507,9 @@ namespace RabbitTools
             }
             else if (mode == 'H')
             {
+                if (XOnlyState == 'W')
+                    return;
+
                 g.DrawLine(p,
                     MapCoord("X", curvePoint[8]),
                     MapCoord("Y", curvePoint[9]),
@@ -660,7 +666,12 @@ namespace RabbitTools
             nums = null;
             data = null;
 
-            // curvePoint? handlePointDrew?
+            for (int i = 0; i <= 15; i++)
+                curvePoint[i] = 0;
+
+            for (int i = 0; i <= 8; i++)
+                handlePointDrew[i] = 0;
+
             DrawCanvasClear("init");
 
             btnOperate.Enabled = false;
@@ -802,10 +813,9 @@ namespace RabbitTools
 
         private void HandlePresetChange(string preset = null)
         {
-            DrawCanvasClear("init");
-            
             if (paintMode == 'D')
             {
+                DrawCanvasClear("init");
                 presetLinear.Enabled = false;
                 presetLog.   Enabled = false;
                 presetPow.   Enabled = false;
@@ -829,9 +839,11 @@ namespace RabbitTools
                 case 'S':       // Separately
                     if (XOnlyState == 'A')
                     {
-                        this.preset[0] = preset;
+                        if (preset != "")
+                            this.preset[0] = preset;
                         DrawCanvasCurve('W');
-                        this.preset[1] = preset;
+                        if (preset != "")
+                            this.preset[1] = preset;
                         DrawCanvasCurve('H');
                     }
                     else if (XOnlyState == 'W')
@@ -840,15 +852,18 @@ namespace RabbitTools
                         goto case 'H';
                     break;
                 case 'W':
-                    this.preset[0] = preset;
+                    if (preset != "")
+                        this.preset[0] = preset;
                     DrawCanvasCurve('W');
                     break;
                 case 'H':
-                    this.preset[1] = preset;
+                    if (preset != "")
+                        this.preset[1] = preset;
                     DrawCanvasCurve('H');
                     break;
                 case 'U':       // UniControl
-                    this.preset[0] = preset;
+                    if (preset != "")
+                        this.preset[0] = preset;
                     DrawCanvasCurve('U');
                     break;
             }
@@ -973,30 +988,36 @@ namespace RabbitTools
             }
         }
 
-        CubicBezierCurve bezier;
-
+        // TODO: Add protect zone in case size is set to 0
         private void btnOperate_Click(object sender, EventArgs e)
         {   
-            switch (this.dir)
+            CubicBezierCurve bezier;
+            
+            switch (sender == btnOperate ? this.dir : sender)
             {
                 case "TL":
-                    bezier = new CubicBezierCurve(
-                        (this.curvePoint[2] - this.curvePoint[0]) / 250f,
-                        Math.Abs(this.curvePoint[1] - this.curvePoint[3]) / 
-                            Math.Abs(this.curvePoint[1] - this.curvePoint[7]),
-                        (this.curvePoint[4] - this.curvePoint[0]) / 250f,
-                        Math.Abs(this.curvePoint[1] - this.curvePoint[5]) / 
-                            Math.Abs(this.curvePoint[1] - this.curvePoint[7]));
+                    // Little tricky for code reuse
+                    btnOperate_Click("T", null);
+                    btnOperate_Click("L", null);
                     break;
 
                 case "T":
-                    bezier = new CubicBezierCurve(
-                        (this.curvePoint[10] - this.curvePoint[8]) / 250f,
-                        (float)(this.curvePoint[9] - this.curvePoint[11]) /
-                            (float)(this.curvePoint[9] - this.curvePoint[15]),
-                        (this.curvePoint[12] - this.curvePoint[8]) / 250f,
-                        (float)(this.curvePoint[9] - this.curvePoint[13]) /
-                            (float)(this.curvePoint[9] - this.curvePoint[15]));
+                    if (uniControl)
+                        bezier = new CubicBezierCurve(
+                        (this.curvePoint[2] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[3]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]),
+                        (this.curvePoint[4] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[5]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]));
+                    else
+                        bezier = new CubicBezierCurve(
+                            (this.curvePoint[10] - this.curvePoint[8]) / 250f,
+                            (float)(this.curvePoint[9] - this.curvePoint[11]) /
+                                (float)(this.curvePoint[9] - this.curvePoint[15]),
+                            (this.curvePoint[12] - this.curvePoint[8]) / 250f,
+                            (float)(this.curvePoint[9] - this.curvePoint[13]) /
+                                (float)(this.curvePoint[9] - this.curvePoint[15]));
 
                     for (int i = 2; i <= this.nums.Length - 2; i++)
                     {
@@ -1014,28 +1035,125 @@ namespace RabbitTools
                     break;
 
                 case "TR":
+                    btnOperate_Click("T", null);
+                    btnOperate_Click("R", null);
                     break;
 
                 case "L":
+                    bezier = new CubicBezierCurve(
+                        (this.curvePoint[2] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[3]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]),
+                        (this.curvePoint[4] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[5]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]));
+
+                    for (int i = 2; i <= this.nums.Length - 2; i++)
+                    {
+                        float prevW = this.wsr[i].Width;
+
+                        this.wsr[i].Width =
+                            Math.Abs(this.data[1, 2] +
+                            bezier.GetPoint(bezier.GetClosestParam(
+                                (float)(nums[i] - nums[1]) / (float)(nums[nums.Length - 1] - nums[1])
+                            )).Y *
+                            (this.data[nums.Length - 1, 2] - this.data[1, 2]));
+
+                        this.wsr[i].Left -= this.wsr[i].Width - prevW;
+                    }
                     break;
 
                 case "CTR":
+                    bezier = new CubicBezierCurve(
+                        (this.curvePoint[2] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[3]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]),
+                        (this.curvePoint[4] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[5]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]));
+
+                    for (int i = 2; i <= this.nums.Length - 2; i++)
+                    {
+                        float prevW = this.wsr[i].Width;
+
+                        this.wsr[i].Width =
+                            Math.Abs(this.data[1, 2] +
+                            bezier.GetPoint(bezier.GetClosestParam(
+                                (float)(nums[i] - nums[1]) / (float)(nums[nums.Length - 1] - nums[1])
+                            )).Y *
+                            (this.data[nums.Length - 1, 2] - this.data[1, 2]));
+
+                        this.wsr[i].Left -= (this.wsr[i].Width - prevW) / 2;
+                    }
+
+                    if (!uniControl)
+                        bezier = new CubicBezierCurve(
+                            (this.curvePoint[10] - this.curvePoint[8]) / 250f,
+                            (float)(this.curvePoint[9] - this.curvePoint[11]) /
+                                (float)(this.curvePoint[9] - this.curvePoint[15]),
+                            (this.curvePoint[12] - this.curvePoint[8]) / 250f,
+                            (float)(this.curvePoint[9] - this.curvePoint[13]) /
+                                (float)(this.curvePoint[9] - this.curvePoint[15]));
+
+                    for (int i = 2; i <= this.nums.Length - 2; i++)
+                    {
+                        float prevH = this.wsr[i].Height;
+
+                        this.wsr[i].Height =
+                            Math.Abs(this.data[1, 3] +
+                            bezier.GetPoint(bezier.GetClosestParam(
+                                (float)(nums[i] - nums[1]) / (float)(nums[nums.Length - 1] - nums[1])
+                            )).Y *
+                            (this.data[nums.Length - 1, 3] - this.data[1, 3]));
+
+                        this.wsr[i].Top -= (this.wsr[i].Height - prevH) / 2;
+                    }
                     break;
 
                 case "R":
+                    bezier = new CubicBezierCurve(
+                        (this.curvePoint[2] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[3]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]),
+                        (this.curvePoint[4] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[5]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]));
+
+                    for (int i = 2; i <= this.nums.Length - 2; i++)
+                    {
+                        float prevW = this.wsr[i].Width;
+
+                        this.wsr[i].Width =
+                            Math.Abs(this.data[1, 2] +
+                            bezier.GetPoint(bezier.GetClosestParam(
+                                (float)(nums[i] - nums[1]) / (float)(nums[nums.Length - 1] - nums[1])
+                            )).Y *
+                            (this.data[nums.Length - 1, 2] - this.data[1, 2]));
+                    }
                     break;
 
                 case "BL":
+                    btnOperate_Click("B", null);
+                    btnOperate_Click("L", null);
                     break;
 
                 case "B":
-                    bezier = new CubicBezierCurve(
-                        (this.curvePoint[10] - this.curvePoint[8]) / 250f,
-                        (float)(this.curvePoint[9] - this.curvePoint[11]) /
-                            (float)(this.curvePoint[9] - this.curvePoint[15]),
-                        (this.curvePoint[12] - this.curvePoint[8]) / 250f,
-                        (float)(this.curvePoint[9] - this.curvePoint[13]) /
-                            (float)(this.curvePoint[9] - this.curvePoint[15]));
+                    if (uniControl)
+                        bezier = new CubicBezierCurve(
+                        (this.curvePoint[2] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[3]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]),
+                        (this.curvePoint[4] - this.curvePoint[0]) / 250f,
+                        (float)(this.curvePoint[1] - this.curvePoint[5]) /
+                            (float)(this.curvePoint[1] - this.curvePoint[7]));
+                    else
+                        bezier = new CubicBezierCurve(
+                            (this.curvePoint[10] - this.curvePoint[8]) / 250f,
+                            (float)(this.curvePoint[9] - this.curvePoint[11]) /
+                                (float)(this.curvePoint[9] - this.curvePoint[15]),
+                            (this.curvePoint[12] - this.curvePoint[8]) / 250f,
+                            (float)(this.curvePoint[9] - this.curvePoint[13]) /
+                                (float)(this.curvePoint[9] - this.curvePoint[15]));
 
                     for (int i = 2; i <= this.nums.Length - 2; i++)
                     {
@@ -1049,10 +1167,18 @@ namespace RabbitTools
                     break;
 
                 case "BR":
+                    btnOperate_Click("B", null);
+                    btnOperate_Click("R", null);
                     break;
             }
 
-            HandleWindowSelectionChanged(this.sel);
+            // Only draw once, don't draw when decompose 2 dir into 2 * 1 dir
+            if (sender == btnOperate)
+            {
+                // Draw after-operation curve to show effect
+                GetNumbersFromShapeRange(app.ActiveWindow.Selection.ShapeRange);
+                HandlePresetChange("");
+            }
         }
     }
 }
