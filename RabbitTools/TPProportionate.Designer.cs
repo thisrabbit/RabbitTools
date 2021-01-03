@@ -114,9 +114,9 @@ namespace RabbitTools
             this.pr1.ForeColor = System.Drawing.SystemColors.ControlText;
             this.pr1.Location = new System.Drawing.Point(6, 20);
             this.pr1.Name = "pr1";
-            this.pr1.Size = new System.Drawing.Size(126, 16);
+            this.pr1.Size = new System.Drawing.Size(138, 16);
             this.pr1.TabIndex = 26;
-            this.pr1.Text = "选择了至少3个形状";
+            this.pr1.Text = "选择了至少3个形状。";
             this.pr1.UseVisualStyleBackColor = true;
             // 
             // pr4
@@ -126,9 +126,9 @@ namespace RabbitTools
             this.pr4.ForeColor = System.Drawing.SystemColors.ControlText;
             this.pr4.Location = new System.Drawing.Point(6, 84);
             this.pr4.Name = "pr4";
-            this.pr4.Size = new System.Drawing.Size(240, 16);
+            this.pr4.Size = new System.Drawing.Size(216, 16);
             this.pr4.TabIndex = 25;
-            this.pr4.Text = "已为最大值和最小值形状指定不同的尺寸";
+            this.pr4.Text = "最小值形状尺寸小于最大值形状尺寸";
             this.pr4.UseVisualStyleBackColor = true;
             // 
             // pr3
@@ -311,9 +311,11 @@ namespace RabbitTools
             this.dirFL.Size = new System.Drawing.Size(29, 12);
             this.dirFL.TabIndex = 35;
             this.dirFL.Text = "中心";
+            this.dirFL.Visible = false;
             // 
             // dirCTR
             // 
+            this.dirCTR.Enabled = false;
             this.dirCTR.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirCTR.Location = new System.Drawing.Point(100, 52);
             this.dirCTR.Name = "dirCTR";
@@ -325,6 +327,7 @@ namespace RabbitTools
             // 
             // dirBR
             // 
+            this.dirBR.Enabled = false;
             this.dirBR.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirBR.Location = new System.Drawing.Point(181, 81);
             this.dirBR.Name = "dirBR";
@@ -336,6 +339,7 @@ namespace RabbitTools
             // 
             // dirBL
             // 
+            this.dirBL.Enabled = false;
             this.dirBL.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirBL.Location = new System.Drawing.Point(19, 81);
             this.dirBL.Name = "dirBL";
@@ -347,6 +351,7 @@ namespace RabbitTools
             // 
             // dirTR
             // 
+            this.dirTR.Enabled = false;
             this.dirTR.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirTR.Location = new System.Drawing.Point(181, 23);
             this.dirTR.Name = "dirTR";
@@ -358,6 +363,7 @@ namespace RabbitTools
             // 
             // dirTL
             // 
+            this.dirTL.Enabled = false;
             this.dirTL.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirTL.Location = new System.Drawing.Point(19, 23);
             this.dirTL.Name = "dirTL";
@@ -369,6 +375,7 @@ namespace RabbitTools
             // 
             // dirR
             // 
+            this.dirR.Enabled = false;
             this.dirR.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirR.Location = new System.Drawing.Point(181, 52);
             this.dirR.Name = "dirR";
@@ -380,6 +387,7 @@ namespace RabbitTools
             // 
             // dirL
             // 
+            this.dirL.Enabled = false;
             this.dirL.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirL.Location = new System.Drawing.Point(19, 52);
             this.dirL.Name = "dirL";
@@ -391,6 +399,7 @@ namespace RabbitTools
             // 
             // dirB
             // 
+            this.dirB.Enabled = false;
             this.dirB.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirB.Location = new System.Drawing.Point(100, 81);
             this.dirB.Name = "dirB";
@@ -413,6 +422,7 @@ namespace RabbitTools
             // 
             // dirT
             // 
+            this.dirT.Enabled = false;
             this.dirT.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.dirT.Location = new System.Drawing.Point(100, 23);
             this.dirT.Name = "dirT";

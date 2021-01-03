@@ -5,44 +5,83 @@ using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 
 namespace RabbitTools
 {
-    // TODO: Fix initial selection and content save when window is changed
+    // TODO: Fix content save when window is changed
     public partial class TPProportionate : UserControl
     {
         PowerPoint.Application app = Globals.ThisAddIn.Application;
 
-        // TODO: Refactor state management code!!!
-
+        /// DRAWING VARIABLE REUSE
+        /// ---------------------------------------------------------------------------
+        
         Graphics g;
         Pen p;
         Font f = new Font(new FontFamily("arial"), 6);
-        bool mouseDown = false;
 
-        double[] nums;
+        /// ---------------------------------------------------------------------------
 
-        // data[0] = [minWidthIndex, maxWidthIndex, minHeightIndex, maxHeightIndex]
-        float[,] data;
 
-        PowerPoint.Selection sel;
-        // Writeable SelectionRange
-        PowerPoint.Shape[] wsr;
+        /// APP STATE MAINTAINANCE
+        /// ---------------------------------------------------------------------------
 
-        string dir = "CTR";
+        // Initial pre-requirements check
+        short checkCode = 0b000;
 
-        // [PresetForWidth, PresetForHeight]
-        string[] preset = new string[2];
+        // Init state of direction change component
+        string dir = "DISABLED";
 
         // Be true if Width == Height for all shapes
         bool uniControl = true;
+        
+        // Paint mode
+        // 'D'(Disabled), 'W'(Width), 'H'(Height), 'U'(UniControl), 'S'(Separately)
+        char paintMode = 'D';
 
-        ///[WidthLeftCorNerX,   WLCNY, 
-        /// WidthLeftConTrolX,  WLCTY,
-        /// WidthRightConTrolX, WRCTY,
-        /// WidthRightCorNerX,  WRCNY,
-        /// HLCNX,              HLCNY,
-        /// HLCTX,              HLCTX,
-        /// HRCTX,              HRCTY,
-        /// HRCNX,              HRCTY]
-        int[] curvePoint = new int[16];
+        // Show only X or Y curve when both are activated
+        // 'D'(Disabled), 'W'(Width), 'H'(Height)
+        char XOnlyState = 'D';
+
+        /// --------------------------------------------------------------------------
+
+
+        /// APP DATA STRUCTURE GLOBAL SAVE
+        /// --------------------------------------------------------------------------
+
+        // Save selection for later repaint
+        PowerPoint.Selection sel;
+
+        // Writeable SelectionRange (for safe sort)
+        PowerPoint.Shape[] wsr;
+
+        // Save numbers inside shapes (asc-sorted)
+        double[] nums;
+
+        // Save shapes' data for later calculate
+        // data[0] = [minWidthIndex, maxWidthIndex, minHeightIndex, maxHeightIndex]
+        float[,] data;
+
+        // When UniControl, data will be saved in position of "Width", 
+        // and the original "Height" area will be null
+        // [PresetForWidth, PresetForHeight]
+        string[] preset = new string[2];
+
+        // Save key points' coordinates (in canvas coords system, unmapped)
+        // [WidthLeftCorNerX,   WLCNY, 
+        //  WidthLeftConTrolX,  WLCTY,
+        //  WidthRightConTrolX, WRCTY,
+        //  WidthRightCorNerX,  WRCNY,
+        //  HLCNX,              HLCNY,
+        //  HLCTX,              HLCTX,
+        //  HRCTX,              HRCTY,
+        //  HRCNX,              HRCTY]
+        short[] curvePoint = new short[16];
+
+        // Save control point handles' coords (in canvas coords system, mapped) 
+        // for event listening
+        // Maximum 4 control points
+        // [0] = count, [odd] = x, [even] = y
+        short[] handlePointDrew = new short[9];
+
+        /// ---------------------------------------------------------------------------
 
         public TPProportionate()
         {
@@ -58,20 +97,32 @@ namespace RabbitTools
                 new PowerPoint.EApplication_WindowSelectionChangeEventHandler(HandleWindowSelectionChanged);
         }
 
+        // Will not only be invoked by event handler, but also repaint request
         public void HandleWindowSelectionChanged(PowerPoint.Selection sel)
         {
             if (!Globals.ThisAddIn.TPProportionate.Visible)
                 return;
 
-            if (sel.Type == PowerPoint.PpSelectionType.ppSelectionShapes)
+            if (sel != null &&
+                sel.Type == PowerPoint.PpSelectionType.ppSelectionShapes)
             {
                 if (sel.ShapeRange.Count >= 3)
                 {
-                    pr1.Checked = true;
-                    int rCode = GetNumbersFromShapeRange(sel.ShapeRange);
-                    pr2.Checked = (rCode & 0b001) > 0;
-                    pr3.Checked = (rCode & 0b010) > 0;
-                    pr4.Checked = (rCode & 0b100) > 0;
+                    // Quick check pr4 when pr1~3 are already checked
+                    if (checkCode == 0b0111)
+                    {
+                        checkCode = GetNumbersFromShapeRange(sel.ShapeRange, true);
+                        pr4.Checked = (checkCode & 0b1000) > 0;
+                    }
+                    else
+                    {
+                        pr1.Checked = true;
+                        checkCode = GetNumbersFromShapeRange(sel.ShapeRange);
+                        pr2.Checked = (checkCode & 0b0010) > 0;
+                        pr3.Checked = (checkCode & 0b0100) > 0;
+                        pr4.Checked = (checkCode & 0b1000) > 0;
+                    }
+
                     Activate(sel);
                 }
             }
@@ -79,76 +130,93 @@ namespace RabbitTools
                 Deactivate();
         }
 
-        private int GetNumbersFromShapeRange(PowerPoint.ShapeRange sr)
+        private short GetNumbersFromShapeRange(PowerPoint.ShapeRange sr, bool quick = false)
         {
-            nums = new double[sr.Count+1];
-            for (int i = 1; i <= sr.Count; i++)
+            // verbose == false means just need a quick check for pr4, 
+            // which pr1~3 are already checked and true
+            if (!quick)
             {
-                string txt = sr[i].TextEffect.Text;
-                if (!double.TryParse(txt, out nums[i]))
+                // Try parse string inside shapes to number
+                nums = new double[sr.Count + 1];
+                for (int i = 1; i <= sr.Count; i++)
+                {
+                    string txt = sr[i].TextEffect.Text;
+                    if (!double.TryParse(txt, out nums[i]))
+                    {
+                        // Doesn't match pr2: shapes contain numbers
+                        nums = null;
+                        return 0b0001;
+                    }
+                }
+
+                // Copy read-only selection range so that we can sort them
+                wsr = new PowerPoint.Shape[sr.Count + 1];
+                for (int i = 1; i <= sr.Count; i++)
+                {
+                    wsr[i] = sr[i];
+                }
+
+                // Selection sort based on number
+                for (int i = 1; i <= sr.Count; i++)
+                {
+                    int minIndex = i;
+                    for (int j = i + 1; j <= sr.Count; j++)
+                    {
+                        minIndex = nums[minIndex] > nums[j] ? j : minIndex;
+                    }
+
+                    if (minIndex != i)
+                    {
+                        PowerPoint.Shape tmp = wsr[minIndex];
+                        wsr[minIndex] = wsr[i];
+                        wsr[i] = tmp;
+
+                        nums[i] += nums[minIndex];
+                        nums[minIndex] = nums[i] - nums[minIndex];
+                        nums[i] -= nums[minIndex];
+                    }
+                }
+
+                // Doesn't match pr3: min num cann't be the same as max num
+                if (nums[1] == nums[sr.Count])
                 {
                     nums = null;
-                    return 0b000;
+                    wsr = null;
+                    return 0b0011;
                 }
-            }
 
-            wsr = new PowerPoint.Shape[sr.Count + 1];
-            for (int i = 1; i <= sr.Count; i++)
-            {
-                wsr[i] = sr[i];
-            }
-            // sort
-            for (int i = 1; i <= sr.Count; i++)
-            {
-                int minIndex = i;
-                for (int j = i + 1; j <= sr.Count; j++)
+                // Save shapes data for later use
+                data = new float[sr.Count + 1, 4];
+                for (int i = 1; i <= sr.Count; i++)
                 {
-                    minIndex = nums[minIndex] > nums[j] ? j : minIndex;
+                    data[i, 0] = wsr[i].Left;
+                    data[i, 1] = wsr[i].Top;
+                    // W&H for those nubmer in shape is negative will be negative
+                    // (benefits canvas drawing)
+                    data[i, 2] = (nums[i] >= 0 ? 1 : -1) * wsr[i].Width;
+                    data[i, 3] = (nums[i] >= 0 ? 1 : -1) * wsr[i].Height;
+
+                    // If W=H, then only one curve and one control point pair is enough
+                    uniControl &= data[i, 2] == data[i, 3];
                 }
 
-                if (minIndex != i)
-                {
-                    PowerPoint.Shape tmp = wsr[minIndex];
-                    wsr[minIndex] = wsr[i];
-                    wsr[i] = tmp;
-                    tmp = null;
-
-                    nums[i] += nums[minIndex];
-                    nums[minIndex] = nums[i] - nums[minIndex];
-                    nums[i] -= nums[minIndex];
-                }
+                // Make help for coords calculate and canvas drawing
+                FindMinMaxdata(sr.Count);
             }
-
-            if (nums[1] == nums[sr.Count])
-            {
-                nums = null;
-                wsr = null;
-                return 0b001;
-            }
-
-            data = new float[sr.Count + 1, 4];
-            for (int i = 1; i <= sr.Count; i++)
-            {
-                data[i, 0] = wsr[i].Left;
-                data[i, 1] = wsr[i].Top;
-                data[i, 2] = (nums[i] >= 0 ? 1 : -1) * wsr[i].Width;
-                data[i, 3] = (nums[i] >= 0 ? 1 : -1) * wsr[i].Height;
-
-                uniControl &= data[i, 2] == data[i, 3];
-            }
-
-            FindMinMaxdata(sr.Count);
 
             if (((dir != "L" && dir != "R") && (data[1, 3] >= data[nums.Length - 1, 3])) ||
                 ((dir != "T" && dir != "B") && (data[1, 2] >= data[nums.Length - 1, 2])))
             {
-                nums = null;
-                wsr = null;
-                data = null;
-                return 0b011;
+                // Doesn't match pr4: min < max
+                // Reserved variables for later dir change
+                //nums = null;
+                //wsr = null;
+                //data = null;
+                return 0b0111;
             }
 
-            return 0b111;
+            // All pre-requests are valid
+            return 0b1111;
         }
 
         private void FindMinMaxdata(int count)
@@ -170,17 +238,16 @@ namespace RabbitTools
             data[0, 3] = maxHI;
         }
 
+        bool mouseDown = false;
         private void canvas_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            this.mouseDown = true;
+            mouseDown = true;
         }
 
         private void canvas_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             if (!mouseDown)
                 return;
-
-
         }
 
         private void canvas_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -188,21 +255,21 @@ namespace RabbitTools
             this.mouseDown = false;
         }
 
-        private void DrawCanvasClear(string mode)
+        private void DrawCanvasClear(string mode = "refresh")
         {
             if (mode == "refresh")
-            {
                 g.Clear(ColorTable.BG);
-            }
             else if (mode == "init")
             {
-                DrawCanvasClear("refresh");
+                DrawCanvasClear();
                 p.Color = ColorTable.Axis;
                 p.Width = 1;
                 g.DrawLine(p, 0, 0, 250, 200);
             }
+
         }
 
+        // Map 250 * 200 canvas size to 230 * 180 to avoid drawing on the edge
         // mode = "X", "Y", "IX"(Inverse X), "IY"
         private int MapCoord(string mode, int value)
         {
@@ -221,18 +288,22 @@ namespace RabbitTools
             }
         }
         
+        // Draw basic num points and y = 0 line, 
+        // W points, H points according to different paint mode
         private void DrawCanvasInfo()
         {
-            DrawCanvasClear("refresh");
+            DrawCanvasClear();
 
             int count = nums.Length - 1;
+
+            // Basic coords calculate
             float YMax, YMin;
-            if (this.dir == "T" || this.dir == "B")
+            if (dir == "T" || dir == "B")
             {
                 YMax = data[(int)data[0, 3], 3];
                 YMin = data[(int)data[0, 2], 3];
             }
-            else if (this.dir == "L" || this.dir == "R")
+            else if (dir == "L" || dir == "R")
             {
                 YMax = data[(int)data[0, 1], 2];
                 YMin = data[(int)data[0, 0], 2];
@@ -242,11 +313,12 @@ namespace RabbitTools
                 YMax = Math.Max(data[(int)data[0, 1], 2], data[(int)data[0, 3], 3]);
                 YMin = Math.Min(data[(int)data[0, 0], 2], data[(int)data[0, 2], 3]);
             }
+            // End of Basic coords calculate
             
             float YRange = YMax - YMin;
             double XRange = nums[count] - nums[1];
 
-            // Draw number points
+            // Draw num points
             int y0;
             if (YMin >= 0)
                 y0 = 200;
@@ -268,26 +340,26 @@ namespace RabbitTools
                         (int)((nums[i] - nums[1]) / XRange * 250)) - 5,
                     MapedY0 - 5, 10, 10);
             }
-
-            char currentXOnlyState = TestCurrentXOnlyState();
+            // End of Draw num points
 
             SolidBrush SBSelected;
-            int offset = 2;
-            // Draw width points
-            if (this.dir != "T" && this.dir != "B")
+            short offset = 2;
+
+            // Draw width points or uni points
+            if (dir != "T" && dir != "B")
             {
                 string axis = "W";
 
-                if (currentXOnlyState == 'H')
+                if (paintMode == 'S' && XOnlyState == 'H')
                     SBSelected = ColorTable.WidthTintBrush;
                 else
                     SBSelected = ColorTable.WidthBrush;
 
-                if (this.dir == "L" || this.dir == "R")
+                if (dir == "L" || dir == "R")
                     offset = 0;
                 else
                 {
-                    if (currentXOnlyState == 'U')
+                    if (paintMode == 'U')
                     {
                         SBSelected = ColorTable.UniBrush;
                         offset = 0;
@@ -297,8 +369,8 @@ namespace RabbitTools
 
                 for (int i = 1; i <= count; i++)
                 {
-                    int x = (int)((nums[i] - nums[1]) / XRange * 250) - offset;
-                    int y = (int)((YMax - data[i, 2]) / YRange * 200);
+                    short x = (short)(((nums[i] - nums[1]) / XRange * 250) - offset);
+                    short y = (short)((YMax - data[i, 2]) / YRange * 200);
 
                     if (i == 1)
                     {
@@ -319,27 +391,25 @@ namespace RabbitTools
 
                 g.DrawString(axis, f, SBSelected, 0, y0 <= 100 ? 190 : 0);
             }
+            // End of Draw width points
 
             // Draw height points
-            if (this.dir != "L" && this.dir != "R")
+            if (dir != "L" && dir != "R" && paintMode != 'U')
             {
-                if (this.dir != "T" && this.dir != "B" && uniControl)
-                    return;
-
-                if (this.dir == "T" || this.dir == "B")
+                if (dir == "T" || dir == "B")
                     offset = 0;
                 else
                     offset = 2;
 
-                if (currentXOnlyState == 'W')
+                if (paintMode == 'S' && XOnlyState == 'W')
                     SBSelected = ColorTable.HeightTintBrush;
                 else
                     SBSelected = ColorTable.HeightBrush;
 
                 for (int i = 1; i <= count; i++)
                 {
-                    int x = (int)((nums[i] - nums[1]) / XRange * 250) + offset;
-                    int y = (int)((YMax - data[i, 3]) / YRange * 200);
+                    short x = (short)(((nums[i] - nums[1]) / XRange * 250) + offset);
+                    short y = (short)((YMax - data[i, 3]) / YRange * 200);
 
                     if (i == 1)
                     {
@@ -362,46 +432,48 @@ namespace RabbitTools
             }
         }
 
-        /// dir = "LX", "LY", "RX", "RY", 
-        ///       "ILX"(Inverse Left), "ILY", "IRX"(Inverse Right), "IRY"
+        // dir = "LX", "LY", "RX", "RY", 
+        //       "ILX"(Inverse Left), "ILY", "IRX"(Inverse Right), "IRY"
         private int MapControlPoint(string dir, int value)
         {
             return value;
             
             // Too difficult to map coords, so abandon.
-            switch (dir)
-            {
-                case "LX":
-                    return value / 3 * 2;
-                case "LY":
-                    return 200 - (200 - value) / 3 * 2;
-                case "RX":
-                    return 250 - (250 - value) / 3 * 2;
-                case "RY":
-                    return value / 3 * 2;
-                case "ILX":
-                    return 0;
-                case "ILY":
-                    return 0;
-                case "IRX":
-                    return 0;
-                case "IRY":
-                    return 0;
-                default:
-                    return 0;
-            }
+            //switch (dir)
+            //{
+            //    case "LX":
+            //        return value / 3 * 2;
+            //    case "LY":
+            //        return 200 - (200 - value) / 3 * 2;
+            //    case "RX":
+            //        return 250 - (250 - value) / 3 * 2;
+            //    case "RY":
+            //        return value / 3 * 2;
+            //    case "ILX":
+            //        return 0;
+            //    case "ILY":
+            //        return 0;
+            //    case "IRX":
+            //        return 0;
+            //    case "IRY":
+            //        return 0;
+            //    default:
+            //        return 0;
+            //}
         }
 
         // Draw one pair of control points at a time
-        private void DrawCanvasControlHandle(char mode, char compiledMode, string preset)
+        private void DrawCanvasControlHandle(char mode)
         {
-            if (preset != "custom")
+            int presetIndex = (mode == 'W' || mode == 'U') ? 1 : 0;
+            
+            if (preset[presetIndex] != "custom")
                 return;
 
             p.Color = ColorTable.ControlLine;
             p.Width = 4;
             
-            if (compiledMode == 'W' || compiledMode == 'U')
+            if (mode == 'W' || mode == 'U')
             {
                 g.DrawLine(p, 
                     MapCoord("X", curvePoint[0]), 
@@ -430,7 +502,7 @@ namespace RabbitTools
                     MapCoord("Y", MapControlPoint("RY", curvePoint[5]) - 4),
                     8, 8);
             }
-            else if (compiledMode == 'H')
+            else if (mode == 'H')
             {
                 g.DrawLine(p,
                     MapCoord("X", curvePoint[8]),
@@ -463,18 +535,22 @@ namespace RabbitTools
 
         // Draw one single curve at a time
         // offset = 2(width), 10(height)
-        private void DrawCanvasCurve(char mode, short offset, string preset)
+        private void DrawCanvasCurve(char mode)
         {
-            switch (preset)
+            int presetIndex = (mode == 'W' || mode == 'U') ? 0 : 1;
+            // 0-2, 1-10
+            int offset = 8 * presetIndex + 2;
+            
+            switch (preset[presetIndex])
             {
                 case "log":
                     curvePoint[offset + 0] = curvePoint[offset - 2];
                     curvePoint[offset + 1] = curvePoint[offset - 1];
-                    curvePoint[offset + 2] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.58);
+                    curvePoint[offset + 2] = (short)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.58);
                     curvePoint[offset + 3] = curvePoint[offset + 5];
                     break;
                 case "pow":
-                    curvePoint[offset + 0] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.42);
+                    curvePoint[offset + 0] = (short)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.42);
                     curvePoint[offset + 1] = curvePoint[offset - 1];
                     curvePoint[offset + 2] = curvePoint[offset + 4];
                     curvePoint[offset + 3] = curvePoint[offset + 5];
@@ -482,45 +558,24 @@ namespace RabbitTools
                 case "custom":
                     break;
                 default:
-                    curvePoint[offset + 0] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.5);
-                    curvePoint[offset + 1] = (int)((curvePoint[offset - 1] + curvePoint[offset + 5]) * 0.5);
+                    curvePoint[offset + 0] = (short)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.5);
+                    curvePoint[offset + 1] = (short)((curvePoint[offset - 1] + curvePoint[offset + 5]) * 0.5);
                     curvePoint[offset + 2] = curvePoint[offset + 0];
                     curvePoint[offset + 3] = curvePoint[offset + 1];
                     break;
             }
 
+            DrawCanvasControlHandle(mode);
+
+            p.Width = 2;
             if (mode == 'W' || mode == 'U')
             {
-                if (mode == 'U')
-                {
-                    if (this.dir == "T" || this.dir == "B")
-                    {
-                        DrawCanvasControlHandle(mode, 'H', preset);
-                    }
-                    else if (this.dir.Length >= 2)
-                    {
-                        DrawCanvasControlHandle(mode, 'U', preset);
-                    }
-                }
-                else
-                {
-                    DrawCanvasControlHandle(mode, 'W', preset);
-                }
+                if (XOnlyState == 'H')
+                    return;
 
                 p.Color = ColorTable.WidthLine;
                 if (mode == 'U')
-                {
-                    if (this.dir == "T" || this.dir == "B")
-                    {
-                        p.Color = ColorTable.HeightLine;
-                    }
-                    else if (this.dir.Length >= 2)
-                    {
-                        p.Color = ColorTable.UniLine;
-                    }
-                }
-
-                p.Width = 2;
+                    p.Color = ColorTable.UniLine;
 
                 g.DrawBezier(p,
                     MapCoord("X", curvePoint[0]),
@@ -534,10 +589,10 @@ namespace RabbitTools
             }
             else if (mode == 'H')
             {
-                DrawCanvasControlHandle(mode, 'H', preset);
-                
+                if (XOnlyState == 'W')
+                    return;
+
                 p.Color = ColorTable.HeightLine;
-                p.Width = 2;
 
                 g.DrawBezier(p,
                     MapCoord("X", curvePoint[8]),
@@ -554,19 +609,25 @@ namespace RabbitTools
         private void Activate(PowerPoint.Selection sel)
         {
             
-            if (pr1.Checked && pr2.Checked && pr3.Checked && pr4.Checked)
+            if (checkCode == 0b1111)
             {
-                btnOperate.Enabled = true;
-                ChangeXOnlyStates('E');
-                DrawCanvasInfo();
-                
-                HandlePresetChange(TestCurrentXOnlyState(), "");
+                this.sel = sel;
 
-                this.sel = sel;
+                HandleDirChange(dir == "DISABLED" ? "CTR" : dir, true);
+                HandlePresetChange("linear");
+                ChangeXOnlyStates((dir.Length == 1 || uniControl) ? 'D' : 'A');
+
+                btnOperate.Enabled = true;
             }
-            else if (pr1.Checked || pr2.Checked || pr3.Checked || pr4.Checked)
+            else if ((checkCode & 0b0100) > 0)
             {
                 this.sel = sel;
+
+                HandleDirChange(dir == "DISABLED" ? "CTR" : dir, true);
+                HandlePresetChange();
+                ChangeXOnlyStates();
+
+                btnOperate.Enabled = false;
             }
             else
             {
@@ -581,246 +642,270 @@ namespace RabbitTools
             pr2.Checked = false;
             pr3.Checked = false;
             pr4.Checked = false;
+            checkCode = 0b0000;
+
+            HandleDirChange();
+
             uniControl = true;
-            nums = null;
-            data = null;
+
+            ChangeXOnlyStates();
+
+            paintMode = 'D';
+
+            HandlePresetChange();
+
             sel = null;
             wsr = null;
+
+            nums = null;
+            data = null;
+
+            // curvePoint? handlePointDrew?
             DrawCanvasClear("init");
-            ChangeXOnlyStates('D');
-            HandlePresetChange('C', "");
-            HandleDirFLChange("CTR");
+
             btnOperate.Enabled = false;
         }
 
         private void ChangeDirBtnGroupState(bool state)
         {
-            dirTL.Enabled = state;
-            dirT.Enabled = state;
-            dirTR.Enabled = state;
-            dirL.Enabled = state;
+            dirTL. Enabled = state;
+            dirT.  Enabled = state;
+            dirTR. Enabled = state;
+            dirL.  Enabled = state;
             dirCTR.Enabled = state;
-            dirR.Enabled = state;
-            dirBL.Enabled = state;
-            dirB.Enabled = state;
-            dirBR.Enabled = state;
+            dirR.  Enabled = state;
+            dirBL. Enabled = state;
+            dirB.  Enabled = state;
+            dirBR. Enabled = state;
+            dirFL. Visible = state;
         }
 
-        private void HandleDirFLChange(string dir)
+        private void HandleDirChange(string dir = "DISABLED", bool fromActivate = false)
         {
             this.dir = dir;
             DrawCanvasClear("init");
-            
+
+            if (dir == "DISABLED")
+            {
+                ChangeDirBtnGroupState(false);
+                return;
+            }
+
+            ChangeDirBtnGroupState(true);
+
             switch (dir)
             {
                 case "TL":
                     dirFL.Text = "左上";
                     dirFL.Top = 28;
                     dirFL.Left = 48;
-                    ChangeXOnlyStates('E');
+                    paintMode = (checkCode & 0b1000) > 0 ? (uniControl ? 'U' : 'S') : 'D';
                     break;
                 case "T":
                     dirFL.Text = "上";
                     dirFL.Top = 28;
                     dirFL.Left = 129;
-                    ChangeXOnlyStates('D');
+                    paintMode = (checkCode & 0b1000) > 0 ? 'H' : 'D';
                     break;
                 case "TR":
                     dirFL.Text = "右上";
                     dirFL.Top = 28;
                     dirFL.Left = 210;
-                    ChangeXOnlyStates('E');
+                    paintMode = (checkCode & 0b1000) > 0 ? (uniControl ? 'U' : 'S') : 'D';
                     break;
                 case "L":
                     dirFL.Text = "左";
                     dirFL.Top = 57;
                     dirFL.Left = 48;
-                    ChangeXOnlyStates('D');
+                    paintMode = (checkCode & 0b1000) > 0 ? 'W' : 'D';
                     break;
                 case "R":
                     dirFL.Text = "右";
                     dirFL.Top = 57;
                     dirFL.Left = 210;
-                    ChangeXOnlyStates('D');
+                    paintMode = (checkCode & 0b1000) > 0 ? 'W' : 'D';
                     break;
                 case "BL":
                     dirFL.Text = "左下";
                     dirFL.Top = 86;
                     dirFL.Left = 48;
-                    ChangeXOnlyStates('E');
+                    paintMode = (checkCode & 0b1000) > 0 ? (uniControl ? 'U' : 'S') : 'D';
                     break;
                 case "B":
                     dirFL.Text = "下";
                     dirFL.Top = 86;
                     dirFL.Left = 129;
-                    ChangeXOnlyStates('D');
+                    paintMode = (checkCode & 0b1000) > 0 ? 'H' : 'D';
                     break;
                 case "BR":
                     dirFL.Text = "右下";
                     dirFL.Top = 86;
                     dirFL.Left = 210;
-                    ChangeXOnlyStates('E');
+                    paintMode = (checkCode & 0b1000) > 0 ? (uniControl ? 'U' : 'S') : 'D';
                     break;
                 case "CTR":
                     dirFL.Text = "中心";
                     dirFL.Top = 57;
                     dirFL.Left = 129;
-                    ChangeXOnlyStates('E');
+                    paintMode = (checkCode & 0b1000) > 0 ? (uniControl ? 'U' : 'S') : 'D';
                     break;
             }
 
-            HandleWindowSelectionChanged(sel);
-            HandlePresetChange(TestCurrentXOnlyState(), "");
+            if (!fromActivate)
+                HandleWindowSelectionChanged(this.sel);
         }
 
         private void dirTL_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("TL");
+            HandleDirChange("TL");
         }
 
         private void dirT_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("T");
+            HandleDirChange("T");
         }
 
         private void dirTR_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("TR");
+            HandleDirChange("TR");
         }
 
         private void dirL_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("L");
+            HandleDirChange("L");
         }
 
         private void dirCTR_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("CTR");
+            HandleDirChange("CTR");
         }
 
         private void dirR_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("R");
+            HandleDirChange("R");
         }
 
         private void dirBL_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("BL");
+            HandleDirChange("BL");
         }
 
         private void dirB_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("B");
+            HandleDirChange("B");
         }
 
         private void dirBR_Click(object sender, EventArgs e)
         {
-            HandleDirFLChange("BR");
+            HandleDirChange("BR");
         }
 
-        private void HandlePresetChange(char mode, string preset)
+        private void HandlePresetChange(string preset = null)
         {
-            if (this.sel != null)
-                DrawCanvasInfo();
+            DrawCanvasClear("init");
+            
+            if (paintMode == 'D')
+            {
+                presetLinear.Enabled = false;
+                presetLog.   Enabled = false;
+                presetPow.   Enabled = false;
+                presetCustom.Enabled = false;
+
+                this.preset[0] = null;
+                this.preset[1] = null;
+                
+                return;
+            }
 
             presetLinear.Enabled = true;
-            presetLog.Enabled = true;
-            presetPow.Enabled = true;
+            presetLog.   Enabled = true;
+            presetPow.   Enabled = true;
             presetCustom.Enabled = true;
 
-            switch (mode)
+            DrawCanvasInfo();
+
+            switch (paintMode)
             {
-                case 'A':       // All
-                    this.preset[0] = preset == "" ? this.preset[0] : preset;
-                    DrawCanvasCurve('W', 2, this.preset[0]);
-                    this.preset[1] = preset == "" ? this.preset[1] : preset;
-                    DrawCanvasCurve('H', 10, this.preset[1]);
+                case 'S':       // Separately
+                    if (XOnlyState == 'A')
+                    {
+                        this.preset[0] = preset;
+                        DrawCanvasCurve('W');
+                        this.preset[1] = preset;
+                        DrawCanvasCurve('H');
+                    }
+                    else if (XOnlyState == 'W')
+                        goto case 'W';
+                    else
+                        goto case 'H';
                     break;
                 case 'W':
-                    this.preset[0] = preset == "" ? this.preset[0] : preset;
-                    DrawCanvasCurve('W', 2, this.preset[0]);
+                    this.preset[0] = preset;
+                    DrawCanvasCurve('W');
                     break;
                 case 'H':
-                    this.preset[1] = preset == "" ? this.preset[1] : preset;
-                    DrawCanvasCurve('H', 10, this.preset[1]);
+                    this.preset[1] = preset;
+                    DrawCanvasCurve('H');
                     break;
                 case 'U':       // UniControl
-                    this.preset[0] = preset == "" ? this.preset[0] : preset;
-                    DrawCanvasCurve('U', 2, this.preset[0]);
-                    break;
-                case 'C':       // Clear
-                    this.preset[0] = "linear";
-                    this.preset[1] = "linear";
-                    presetLinear.Enabled = false;
-                    presetLog.Enabled = false;
-                    presetPow.Enabled = false;
-                    presetCustom.Enabled = false;
+                    this.preset[0] = preset;
+                    DrawCanvasCurve('U');
                     break;
             }
         }
 
         private void presetLinear_Click(object sender, EventArgs e)
         {
-            HandlePresetChange(TestCurrentXOnlyState(), "linear");
+            HandlePresetChange("linear");
         }
 
         private void presetLog_Click(object sender, EventArgs e)
         {
-            HandlePresetChange(TestCurrentXOnlyState(), "log");
+            HandlePresetChange("log");
         }
 
         private void presetPow_Click(object sender, EventArgs e)
         {
-            HandlePresetChange(TestCurrentXOnlyState(), "pow");
+            HandlePresetChange("pow");
         }
 
         private void presetCustom_Click(object sender, EventArgs e)
         {
-            HandlePresetChange(TestCurrentXOnlyState(), "custom");
+            HandlePresetChange("custom");
         }
 
-        private char TestCurrentXOnlyState()
+        private void ChangeXOnlyStates(char mode = 'D')
         {
-            if (WOnly.Enabled && HOnly.Enabled)
-            {
-                if (WOnly.Checked && HOnly.Checked)
-                    return 'A';
-                else if (WOnly.Checked && !HOnly.Checked)
-                    return 'W';
-                else
-                    return 'H';
-            }
-            else
-            {
-                if (uniControl)
-                    return 'U';
-                else if (this.dir == "L" || this.dir == "R")
-                    return 'W';
-                else
-                    return 'H';
-            }
-        }
+            XOnlyState = mode;
 
-        private void ChangeXOnlyStates(char mode)
-        {
+            if (mode == 'D')
+            {
+                WOnly.Enabled = false;
+                WOnly.Checked = false;
+                HOnly.Enabled = false;
+                HOnly.Checked = false;
+
+                return;
+            }
+
+            DrawCanvasClear();
+            DrawCanvasInfo();
+            
             switch (mode)
             {
-                case 'E':
-                    if (this.dir != "T" && this.dir != "B" && 
-                        this.dir != "L" && this.dir != "R" && !uniControl)
-                    {
-                        WOnly.Enabled = true;
-                        WOnly.Checked = true;
-                        HOnly.Enabled = true;
-                        HOnly.Checked = true;
-                        return;
-                    }
-                    goto default;
-                default:    // Disable
-                    WOnly.Enabled = false;
-                    WOnly.Checked = false;
-                    HOnly.Enabled = false;
-                    HOnly.Checked = false;
+                case 'A':   // All
+                    WOnly.Enabled = true;
+                    WOnly.Checked = true;
+                    HOnly.Enabled = true;
+                    HOnly.Checked = true;
+
+                    DrawCanvasCurve('W');
+                    DrawCanvasCurve('H');
+                    break;
+                case 'W':
+                    goto case 'H';
+                case 'H':
+                    DrawCanvasCurve(mode);
                     break;
             }
         }
@@ -828,45 +913,63 @@ namespace RabbitTools
         bool isChangedManually = false;
         private void WOnly_CheckedChanged(object sender, EventArgs e)
         {
-            if (WOnly.Enabled && !isChangedManually)
+            if (XOnlyState == 'D')
+                    return;
+            
+            if (isChangedManually)
+            {
+                isChangedManually = false;
+            }
+            else
             {
                 if (!WOnly.Checked && !HOnly.Checked)
                 {
                     isChangedManually = true;
                     WOnly.Checked = true;
                 }
-
-                if (this.sel != null)
+                else
                 {
-                    DrawCanvasInfo();
-                    HandlePresetChange(TestCurrentXOnlyState(), "");
+                    char XOnly;
+                    if (WOnly.Checked && HOnly.Checked)
+                        XOnly = 'A';
+                    else if (WOnly.Checked && !HOnly.Checked)
+                        XOnly = 'W';
+                    else
+                        XOnly = 'H';
+
+                    ChangeXOnlyStates(XOnly);
                 }
             } 
-            else if (isChangedManually)
-            {
-                isChangedManually = false;
-            }
         }
 
         private void HOnly_CheckedChanged(object sender, EventArgs e)
         {
-            if (HOnly.Enabled && !isChangedManually)
+            if (XOnlyState == 'D')
+                return;
+
+            if (isChangedManually)
+            {
+                isChangedManually = false;
+            }
+            else
             {
                 if (!WOnly.Checked && !HOnly.Checked)
                 {
                     isChangedManually = true;
                     HOnly.Checked = true;
                 }
-
-                if (this.sel != null)
+                else
                 {
-                    DrawCanvasInfo();
-                    HandlePresetChange(TestCurrentXOnlyState(), "");
+                    char XOnly;
+                    if (WOnly.Checked && HOnly.Checked)
+                        XOnly = 'A';
+                    else if (WOnly.Checked && !HOnly.Checked)
+                        XOnly = 'W';
+                    else
+                        XOnly = 'H';
+
+                    ChangeXOnlyStates(XOnly);
                 }
-            }
-            else if (isChangedManually)
-            {
-                isChangedManually = false;
             }
         }
 
