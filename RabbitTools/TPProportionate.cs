@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
@@ -73,13 +74,14 @@ namespace RabbitTools
         //  HLCTX,              HLCTX,
         //  HRCTX,              HRCTY,
         //  HRCNX,              HRCTY]
-        short[] curvePoint = new short[16];
+        int[] curvePoint = new int[16];
 
-        // Save control point handles' coords (in canvas coords system, mapped) 
+        // Save control point handles' coords
+        // (in canvas coords system, mapped, center of the circle)
         // for event listening
         // Maximum 4 control points
-        // [0] = count, [odd] = x, [even] = y
-        short[] handlePointDrew = new short[9];
+        // [CURR(=1,2,3,4), WLX, WLY, WRX, WRY, HLX, HLY, HRX, HRY]
+        int[] handlePointDrew = new int[9];
 
         /// ---------------------------------------------------------------------------
 
@@ -241,18 +243,67 @@ namespace RabbitTools
         bool mouseDown = false;
         private void canvas_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            mouseDown = true;
+            for (int i = 1; i <= 8; i += 2)
+            {
+                if (Math.Pow(handlePointDrew[i] - e.X, 2) + Math.Pow(handlePointDrew[i + 1] - e.Y, 2)
+                    <= 64)
+                {
+                    handlePointDrew[0] = i / 2 + 1;
+                    mouseDown = true;
+
+                    // Find the first corelated handlePoint, and then break the loop
+                    break;
+                }    
+            }
         }
 
+        int prevX = -1, prevY = -1;
         private void canvas_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             if (!mouseDown)
                 return;
+
+            if (prevX != -1 && prevY != -1)
+            {
+                // offset in [handlePointDrew]
+                int offset = handlePointDrew[0] * 2 - 1;
+
+                handlePointDrew[offset] += e.X - prevX;
+
+                // In case out of boundary
+                if (handlePointDrew[offset] < 10)
+                    handlePointDrew[offset] = 10;
+                else if (handlePointDrew[offset] > 240)
+                    handlePointDrew[offset] = 240;
+
+                handlePointDrew[offset + 1] += e.Y - prevY;
+
+                if (handlePointDrew[offset + 1] < 10)
+                    handlePointDrew[offset + 1] = 10;
+                else if (handlePointDrew[offset + 1] > 190)
+                    handlePointDrew[offset + 1] = 190;
+
+                // offset in [curvePoint]
+                int offsetC = ((handlePointDrew[0] > 2) ? 10 : 2) + (-handlePointDrew[0] % 2 + 1) * 2;
+
+                curvePoint[offsetC] = MapCoord("IX", handlePointDrew[offset]);
+                curvePoint[offsetC + 1] = MapCoord("IY", handlePointDrew[offset + 1]);
+
+                HandlePresetChange("");
+            }
+
+            prevX = e.X;
+            prevY = e.Y;
         }
 
         private void canvas_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             this.mouseDown = false;
+
+            prevX = -1;
+            prevY = -1;
+
+            handlePointDrew[0] = -1;
         }
 
         private void DrawCanvasClear(string mode = "refresh")
@@ -276,15 +327,15 @@ namespace RabbitTools
             switch (mode)
             {
                 case "X":
-                    return (int)((float)value / 250f * 230f + 10f);
+                    return (int)Math.Round((float)value / 250f * 230f + 10f);
                 case "Y":
-                    return (int)((float)value / 200f * 180f + 10f);
+                    return (int)Math.Round((float)value / 200f * 180f + 10f);
                 case "IX":
-                    return 0;
+                    return (int)Math.Round(((float)value - 10f) / 230f * 250f);
                 case "IY":
-                    return 0;
+                    return (int)Math.Round(((float)value - 10f) / 180f * 200f);
                 default:
-                    return 0;
+                    return -1;
             }
         }
         
@@ -369,8 +420,8 @@ namespace RabbitTools
 
                 for (int i = 1; i <= count; i++)
                 {
-                    short x = (short)(((nums[i] - nums[1]) / XRange * 250) - offset);
-                    short y = (short)((YMax - data[i, 2]) / YRange * 200);
+                    int x = (int)(((nums[i] - nums[1]) / XRange * 250) - offset);
+                    int y = (int)((YMax - data[i, 2]) / YRange * 200);
 
                     if (i == 1)
                     {
@@ -408,8 +459,8 @@ namespace RabbitTools
 
                 for (int i = 1; i <= count; i++)
                 {
-                    short x = (short)(((nums[i] - nums[1]) / XRange * 250) + offset);
-                    short y = (short)((YMax - data[i, 3]) / YRange * 200);
+                    int x = (int)(((nums[i] - nums[1]) / XRange * 250) + offset);
+                    int y = (int)((YMax - data[i, 3]) / YRange * 200);
 
                     if (i == 1)
                     {
@@ -462,10 +513,16 @@ namespace RabbitTools
             //}
         }
 
+        private void resetHandlePointDrew()
+        {
+            for (int i = 0; i <= 8; i++)
+                handlePointDrew[i] = -1;
+        }
+
         // Draw one pair of control points at a time
         private void DrawCanvasControlHandle(char mode)
         {
-            int presetIndex = (mode == 'W' || mode == 'U') ? 1 : 0;
+            int presetIndex = (mode == 'W' || mode == 'U') ? 0 : 1;
             
             if (preset[presetIndex] != "custom")
                 return;
@@ -504,6 +561,12 @@ namespace RabbitTools
                     MapCoord("X", MapControlPoint("RX", curvePoint[4]) - 4),
                     MapCoord("Y", MapControlPoint("RY", curvePoint[5]) - 4),
                     8, 8);
+
+                // Save control points' coords for event handle
+                handlePointDrew[1] = MapCoord("X", MapControlPoint("LX", curvePoint[2]));
+                handlePointDrew[2] = MapCoord("Y", MapControlPoint("LY", curvePoint[3]));
+                handlePointDrew[3] = MapCoord("X", MapControlPoint("RX", curvePoint[4]));
+                handlePointDrew[4] = MapCoord("Y", MapControlPoint("RY", curvePoint[5]));
             }
             else if (mode == 'H')
             {
@@ -530,12 +593,17 @@ namespace RabbitTools
                     8, 8);
                 g.FillEllipse(ColorTable.ControlPointOuterBrush,
                     MapCoord("X", MapControlPoint("RX", curvePoint[12]) - 8),
-                    MapCoord("Y", MapControlPoint("YX", curvePoint[13]) - 8),
+                    MapCoord("Y", MapControlPoint("RY", curvePoint[13]) - 8),
                     16, 16);
                 g.FillEllipse(ColorTable.ControlPointInnerBrush,
                     MapCoord("X", MapControlPoint("RX", curvePoint[12]) - 4),
-                    MapCoord("Y", MapControlPoint("YX", curvePoint[13]) - 4),
+                    MapCoord("Y", MapControlPoint("RY", curvePoint[13]) - 4),
                     8, 8);
+
+                handlePointDrew[5] = MapCoord("X", MapControlPoint("LX", curvePoint[10]));
+                handlePointDrew[6] = MapCoord("Y", MapControlPoint("LY", curvePoint[11]));
+                handlePointDrew[7] = MapCoord("X", MapControlPoint("RX", curvePoint[12]));
+                handlePointDrew[8] = MapCoord("Y", MapControlPoint("RY", curvePoint[13]));
             }
         }
 
@@ -552,11 +620,11 @@ namespace RabbitTools
                 case "log":
                     curvePoint[offset + 0] = curvePoint[offset - 2];
                     curvePoint[offset + 1] = curvePoint[offset - 1];
-                    curvePoint[offset + 2] = (short)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.58);
+                    curvePoint[offset + 2] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.58);
                     curvePoint[offset + 3] = curvePoint[offset + 5];
                     break;
                 case "pow":
-                    curvePoint[offset + 0] = (short)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.42);
+                    curvePoint[offset + 0] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.42);
                     curvePoint[offset + 1] = curvePoint[offset - 1];
                     curvePoint[offset + 2] = curvePoint[offset + 4];
                     curvePoint[offset + 3] = curvePoint[offset + 5];
@@ -564,8 +632,8 @@ namespace RabbitTools
                 case "custom":
                     break;
                 default:
-                    curvePoint[offset + 0] = (short)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.5);
-                    curvePoint[offset + 1] = (short)((curvePoint[offset - 1] + curvePoint[offset + 5]) * 0.5);
+                    curvePoint[offset + 0] = (int)((curvePoint[offset + 4] + curvePoint[offset - 2]) * 0.5);
+                    curvePoint[offset + 1] = (int)((curvePoint[offset - 1] + curvePoint[offset + 5]) * 0.5);
                     curvePoint[offset + 2] = curvePoint[offset + 0];
                     curvePoint[offset + 3] = curvePoint[offset + 1];
                     break;
@@ -669,8 +737,7 @@ namespace RabbitTools
             for (int i = 0; i <= 15; i++)
                 curvePoint[i] = 0;
 
-            for (int i = 0; i <= 8; i++)
-                handlePointDrew[i] = 0;
+            resetHandlePointDrew();
 
             DrawCanvasClear("init");
 
@@ -902,6 +969,8 @@ namespace RabbitTools
 
                 return;
             }
+
+            resetHandlePointDrew();
 
             DrawCanvasClear();
             DrawCanvasInfo();
