@@ -18,6 +18,7 @@ namespace RabbitTools
         private void LayoutGrid_Click(object sender, RibbonControlEventArgs e)
         {
             Globals.ThisAddIn.TaskPaneGrid.Visible = true;
+            // TODO: Add selection before TaskPane open support
         }
 
         private void ShapeProportionate_Click(object sender, RibbonControlEventArgs e)

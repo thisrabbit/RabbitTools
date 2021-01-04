@@ -10,7 +10,7 @@ namespace RabbitTools
 {
     public partial class ThisAddIn
     {
-        private TaskPaneGrid controlOfPaneGrid;
+        private TPGrid controlOfPaneGrid;
         private Microsoft.Office.Tools.CustomTaskPane taskPaneGrid;
         public Microsoft.Office.Tools.CustomTaskPane TaskPaneGrid
         {
@@ -32,7 +32,7 @@ namespace RabbitTools
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
-            controlOfPaneGrid = new TaskPaneGrid();
+            controlOfPaneGrid = new TPGrid();
             taskPaneGrid = this.CustomTaskPanes.Add(controlOfPaneGrid, "网格布局工具");
             taskPaneGrid.Width = 270;
 

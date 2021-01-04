@@ -210,8 +210,8 @@
     <EmbeddedResource Include="Tab.resx">
       <DependentUpon>Tab.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="TaskPaneGrid.resx">
-      <DependentUpon>TaskPaneGrid.cs</DependentUpon>
+    <EmbeddedResource Include="TPGrid.resx">
+      <DependentUpon>TPGrid.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="TPProportionate.resx">
       <DependentUpon>TPProportionate.cs</DependentUpon>
@@ -230,11 +230,11 @@
     <Compile Include="Tab.Designer.cs">
       <DependentUpon>Tab.cs</DependentUpon>
     </Compile>
-    <Compile Include="TaskPaneGrid.cs">
+    <Compile Include="TPGrid.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="TaskPaneGrid.Designer.cs">
-      <DependentUpon>TaskPaneGrid.cs</DependentUpon>
+    <Compile Include="TPGrid.Designer.cs">
+      <DependentUpon>TPGrid.cs</DependentUpon>
     </Compile>
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>

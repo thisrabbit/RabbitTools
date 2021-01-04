@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using Office = Microsoft.Office.Core;
@@ -7,11 +8,11 @@ using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 
 namespace RabbitTools
 {
-    public partial class TaskPaneGrid : UserControl
+    public partial class TPGrid : UserControl
     {
         PowerPoint.Application app = Globals.ThisAddIn.Application;
 
-        public TaskPaneGrid()
+        public TPGrid()
         {
             InitializeComponent();
             SetStyle(ControlStyles.UserPaint, true);
@@ -20,7 +21,15 @@ namespace RabbitTools
 
             app.WindowSelectionChange +=
                 new PowerPoint.EApplication_WindowSelectionChangeEventHandler(HandleWindowSelectionChanged);
+
+            // API doesn't support requirments
+            //app.AfterShapeSizeChange += HandleShapeSizeChange;
         }
+
+        //public void HandleShapeSizeChange(PowerPoint.Shape s)
+        //{
+        //    Trace.WriteLine("\r\n[X, Y, W, H] " + s.Top + " " + s.Left + " " + s.Width + " " + s.Height + "\r\n");
+        //}
         
         public void HandleWindowSelectionChanged(PowerPoint.Selection sel)
         {
@@ -62,7 +71,7 @@ namespace RabbitTools
             button3.Enabled = true;
             if (selectedCount > 1)
             {
-                button2.Enabled = true;
+                mergeBtn.Enabled = true;
             }
             else
             {
@@ -73,7 +82,7 @@ namespace RabbitTools
         private void deactivate()
         {
             button1.Enabled = false;
-            button2.Enabled = false;
+            mergeBtn.Enabled = false;
             button3.Enabled = false;
 
             label12.Text = "未选择形状";

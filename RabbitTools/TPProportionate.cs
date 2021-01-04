@@ -7,6 +7,7 @@ using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 namespace RabbitTools
 {
     // TODO: Fix content save when window is changed
+    // TODO: Fix canvas blink when repainting
     public partial class TPProportionate : UserControl
     {
         PowerPoint.Application app = Globals.ThisAddIn.Application;
@@ -25,7 +26,7 @@ namespace RabbitTools
         /// ---------------------------------------------------------------------------
 
         // Initial pre-requirements check
-        short checkCode = 0b000;
+        short checkCode = 0b0000;
 
         // Init state of direction change component
         string dir = "DISABLED";
@@ -705,8 +706,10 @@ namespace RabbitTools
             }
             else
             {
-                this.sel = null;
-                btnOperate.Enabled = false;
+                short checkCodeR = checkCode;
+                Deactivate();
+                pr1.Checked = true;
+                pr2.Checked = (checkCodeR & 0b0010) > 0;
             }
         }
 
